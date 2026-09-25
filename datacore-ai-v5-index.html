@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050816">
+<title>DataCore AI</title>
+<meta name="description" content="DataCore AI — one chat for AI, images, documents, CVs, Excel, websites, apps, code, engineering CAD and video.">
+<style>
+:root{--bg:#050816;--panel:#0b1024;--text:#f3f6ff;--muted:#9ba8c7;--line:rgba(255,255,255,.11);--a:#6aa8ff;--b:#8a63ff;--good:#2ed6a1;--danger:#ff6f7d;--shadow:0 22px 70px rgba(0,0,0,.38)}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--text)}
+body{overflow-x:hidden}.fx{position:fixed;inset:0;z-index:-2;overflow:hidden;background:radial-gradient(circle at 10% 7%,rgba(75,125,255,.17),transparent 30%),radial-gradient(circle at 88% 17%,rgba(136,92,255,.15),transparent 28%),var(--bg)}.orb{position:absolute;border-radius:999px;filter:blur(45px);opacity:.25;animation:float 17s ease-in-out infinite alternate}.o1{width:270px;height:270px;background:#4c80ff;left:-100px;top:18%}.o2{width:330px;height:330px;background:#7b4cff;right:-140px;top:32%;animation-duration:23s}@keyframes float{to{transform:translate3d(40px,-35px,0) scale(1.12)}}body.pausefx .orb{animation:none}
+.shell{max-width:1050px;margin:auto;min-height:100vh;display:flex;flex-direction:column}.header{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20;background:rgba(5,8,22,.74);backdrop-filter:blur(18px)}.brand{display:flex;align-items:center;gap:11px}.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center;font-weight:900}.brand h1{font-size:18px;margin:0}.brand p{font-size:11px;color:var(--muted);margin:3px 0 0}.headright{display:flex;align-items:center;gap:8px}.planpill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:7px 9px;color:#d7e1ff;background:rgba(255,255,255,.03)}.iconbtn{width:40px;height:40px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03);color:var(--text);cursor:pointer}
+.main{flex:1;padding:24px 14px 175px}.welcome{max-width:820px;margin:6vh auto 30px;text-align:center}.pill{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:7px 10px;color:#d0d9ef;font-size:12px;background:rgba(255,255,255,.025)}.welcome h2{font-size:clamp(36px,7vw,64px);line-height:1.02;margin:18px 0 13px}.grad{background:linear-gradient(90deg,var(--a),#b28cff);-webkit-background-clip:text;background-clip:text;color:transparent}.welcome p{max-width:720px;margin:auto;color:var(--muted);line-height:1.7}.chips{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:22px}.chip{border:1px solid var(--line);border-radius:999px;padding:9px 12px;background:rgba(255,255,255,.03);color:var(--text);cursor:pointer}
+.messages{max-width:900px;margin:auto;display:grid;gap:16px}.msg{display:flex;gap:10px;align-items:flex-start}.msg.user{justify-content:flex-end}.avatar{width:31px;height:31px;border-radius:10px;background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center;font-size:11px;font-weight:900;flex:0 0 auto}.wrap{max-width:min(86%,790px)}.bubble{border:1px solid var(--line);border-radius:18px;padding:14px 16px;line-height:1.62;word-break:break-word}.user .bubble{background:linear-gradient(135deg,rgba(106,168,255,.20),rgba(138,99,255,.16));white-space:pre-wrap;border-bottom-right-radius:6px}.assistant .bubble{background:rgba(255,255,255,.035);border-bottom-left-radius:6px}.bubble h1,.bubble h2,.bubble h3{line-height:1.25;margin:13px 0 6px}.bubble p{margin:8px 0}.bubble ul,.bubble ol{margin:8px 0 8px 22px;padding:0}.bubble li{margin:5px 0}.bubble code{background:#070b19;border:1px solid var(--line);padding:2px 5px;border-radius:6px}.bubble pre{overflow:auto;background:#070b19;border:1px solid var(--line);padding:12px;border-radius:12px}.bubble pre code{border:0;padding:0;background:transparent}.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:7px}.mini{border:1px solid var(--line);background:rgba(255,255,255,.025);color:var(--muted);border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer}.imagecard img,.videocard video{max-width:100%;border-radius:15px;border:1px solid var(--line);display:block}.videocard video{width:100%}
+.composerbox{position:fixed;left:0;right:0;bottom:0;padding:11px 12px 16px;background:linear-gradient(to top,var(--bg) 74%,transparent);z-index:25}.composerWrap{max-width:920px;margin:auto}.attachment{display:none;align-items:center;gap:10px;margin:0 8px 8px;padding:8px 10px;border:1px solid var(--line);background:rgba(11,16,36,.97);border-radius:13px}.attachment.show{display:flex}.thumb{width:48px;height:48px;border-radius:10px;object-fit:cover;border:1px solid var(--line);display:none}.fileicon{width:48px;height:48px;border-radius:10px;background:rgba(255,255,255,.05);display:grid;place-items:center}.attxt{min-width:0;flex:1}.attxt strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}.attxt span{font-size:11px;color:var(--muted)}.remove{border:0;background:transparent;color:var(--muted);font-size:20px;cursor:pointer}.composer{display:flex;gap:8px;align-items:flex-end;padding:9px;border:1px solid rgba(255,255,255,.14);background:rgba(11,16,36,.96);border-radius:19px;box-shadow:var(--shadow);backdrop-filter:blur(18px)}.attach{width:45px;height:45px;flex:0 0 auto;border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.035);color:var(--text);font-size:20px;cursor:pointer}.composer textarea{flex:1;border:0;outline:0;background:transparent;color:var(--text);resize:none;min-height:45px;max-height:155px;padding:11px 5px;font:inherit}.send{width:46px;height:46px;flex:0 0 auto;border:0;border-radius:14px;background:linear-gradient(135deg,var(--a),var(--b));color:#fff;font-size:20px;cursor:pointer}.send:disabled{opacity:.5}.hint{text-align:center;color:var(--muted);font-size:10px;margin-top:6px}
+.drawer{position:fixed;inset:0;z-index:50;pointer-events:none}.shade{position:absolute;inset:0;background:rgba(0,0,0,.48);opacity:0;transition:.2s}.panel{position:absolute;right:-340px;top:0;width:min(340px,90vw);height:100%;padding:20px;background:#080d1e;border-left:1px solid var(--line);transition:.25s;overflow:auto}.drawer.open{pointer-events:auto}.drawer.open .shade{opacity:1}.drawer.open .panel{right:0}.panel h3{margin:8px 0 16px}.menuitem{width:100%;text-align:left;border:1px solid var(--line);background:rgba(255,255,255,.025);color:var(--text);border-radius:13px;padding:12px;margin-bottom:8px;cursor:pointer}.small{font-size:12px;color:var(--muted);line-height:1.6}
+.modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;padding:16px}.modal.show{display:flex}.modalcard{max-width:960px;width:100%;max-height:92vh;overflow:auto;background:#080d1e;border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow)}.modalhead{display:flex;justify-content:space-between;align-items:center;gap:10px}.plans{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.plan{border:1px solid var(--line);border-radius:16px;padding:16px;background:rgba(255,255,255,.025)}.plan.hot{border-color:rgba(106,168,255,.55)}.price{font-size:27px;font-weight:900;margin:10px 0}.plan ul{padding-left:18px;color:var(--muted);line-height:1.7;font-size:13px}.note{padding:10px 12px;border-radius:12px;background:rgba(106,168,255,.08);border:1px solid rgba(106,168,255,.24);color:#cbd7f8;font-size:12px;line-height:1.5;margin-top:12px}
+.form{display:grid;gap:11px;margin-top:15px}.form input,.form select{width:100%;border:1px solid var(--line);background:rgba(255,255,255,.035);color:var(--text);border-radius:12px;padding:11px 12px;outline:none}.primary,.secondary{border:0;border-radius:12px;padding:11px 15px;cursor:pointer}.primary{background:linear-gradient(135deg,var(--a),var(--b));color:#fff;font-weight:800}.secondary{border:1px solid var(--line);background:rgba(255,255,255,.04);color:var(--text)}.tabs{display:flex;gap:8px;margin-top:13px}.tab{flex:1}.tab.active{border-color:rgba(106,168,255,.55);color:#fff}.error{color:#ff9aa4;font-size:12px;min-height:18px}.usagegrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}.usageitem{border:1px solid var(--line);border-radius:12px;padding:10px;background:rgba(255,255,255,.025)}.usageitem strong{font-size:12px}.usageitem div{font-size:11px;color:var(--muted);margin-top:4px}
+@media(max-width:820px){.main{padding-left:12px;padding-right:12px}.welcome{margin-top:4vh}.wrap{max-width:91%}.plans{grid-template-columns:1fr 1fr}.usagegrid{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.plans,.usagegrid{grid-template-columns:1fr}.planpill{display:none}}
+</style>
+</head>
+<body>
+<div class="fx"><div class="orb o1"></div><div class="orb o2"></div></div>
+<div class="shell">
+<header class="header">
+  <div class="brand"><div class="logo">D</div><div><h1>DataCore AI</h1><p>One Chat • V5</p></div></div>
+  <div class="headright"><div class="planpill" id="planPill">Sign in</div><button class="iconbtn" id="menuBtn">☰</button></div>
+</header>
+
+<main class="main">
+  <section class="welcome" id="welcome">
+    <span class="pill">⚡ DataCore AI • One Chat</span>
+    <h2>Ask, create, build <span class="grad">anything</span></h2>
+    <p>One chat automatically handles normal AI, CVs, jobs, Excel, documents, images, videos, websites, apps, code and engineering CAD.</p>
+    <div class="chips">
+      <button class="chip" data-prompt="Create a cinematic drone image of a tropical beach at sunset">🎨 Image</button>
+      <button class="chip" data-prompt="Create a 5 second cinematic video of a futuristic city at night">🎬 Video</button>
+      <button class="chip" data-prompt="Build a complete responsive business website in one HTML file">🌐 Website</button>
+      <button class="chip" data-prompt="Build an Android app and give me the full source structure">📱 App</button>
+      <button class="chip" data-prompt="Write clean production-ready code for my requirement">💻 Code</button>
+      <button class="chip" data-prompt="Create an AutoCAD 3D conceptual piping layout for an oil and gas facility. Ask for required dimensions and equipment first.">📐 Engineering CAD</button>
+      <button class="chip" data-prompt="Create an ATS-friendly CV using the details I provide">📄 CV</button>
+      <button class="chip" data-prompt="Create a professional master document register">🗂️ Documents</button>
+    </div>
+  </section>
+  <section class="messages" id="messages"></section>
+</main>
+</div>
+
+<div class="composerbox">
+ <div class="composerWrap">
+  <div class="attachment" id="attachment">
+    <img class="thumb" id="thumb" alt=""><div class="fileicon" id="fileIcon">📎</div>
+    <div class="attxt"><strong id="fileName"></strong><span id="fileMeta"></span></div><button class="remove" id="removeFile">×</button>
+  </div>
+  <div class="composer">
+    <button class="attach" id="attachBtn">📎</button>
+    <textarea id="input" rows="1" placeholder="Ask anything, attach an image/document, or describe what you want to create…"></textarea>
+    <button class="send" id="sendBtn">➤</button>
+  </div>
+  <div class="hint">AI can make mistakes. Engineering output must be reviewed by a qualified engineer before field use.</div>
+  <input type="file" id="fileInput" hidden accept="image/*,.pdf,.docx,.xlsx,.xls,.xlsm,.xlsb,.csv,.ods,.odt,.numbers,.html,.htm,.xml,.txt,.md,.json,.js,.ts,.css,.py,.java,.kt,.dart,.sql,.scr,.lsp,.scad,.dxf">
+ </div>
+</div>
+
+<div class="drawer" id="drawer"><div class="shade" id="shade"></div><aside class="panel">
+  <h3>DataCore AI</h3>
+  <div class="small" id="userLine">Not signed in</div><br>
+  <button class="menuitem" id="newChat">＋ New chat</button>
+  <button class="menuitem" id="usageBtn">📊 My usage</button>
+  <button class="menuitem" id="plansBtn">💳 Plans & pricing</button>
+  <button class="menuitem" id="adminBtn">🔐 Admin activation</button>
+  <button class="menuitem" id="fxBtn">✨ Pause animations</button>
+  <button class="menuitem" id="logoutBtn">↪ Logout</button>
+</aside></div>
+
+<div class="modal" id="authModal"><div class="modalcard" style="max-width:470px">
+  <div class="modalhead"><div><h2 style="margin:0">Welcome to DataCore AI</h2><div class="small">Create a free account or sign in.</div></div></div>
+  <div class="tabs"><button class="secondary tab active" id="loginTab">Sign in</button><button class="secondary tab" id="signupTab">Create account</button></div>
+  <div class="form"><input id="authEmail" type="email" placeholder="Email"><input id="authPassword" type="password" placeholder="Password (minimum 8 characters)"><div class="error" id="authError"></div><button class="primary" id="authSubmit">Sign in</button></div>
+</div></div>
+
+<div class="modal" id="plansModal"><div class="modalcard">
+ <div class="modalhead"><div><h2 style="margin:0">Monthly Plans</h2><div class="small">Video generation uses separate video credits because model cost is usage-based.</div></div><button class="iconbtn closeModal">×</button></div>
+ <div class="plans">
+  <div class="plan"><strong>Free</strong><div class="price">$0</div><ul><li>15 AI messages/day</li><li>3 CV tasks/month</li><li>5 job tasks/month</li><li>3 file analyses/month</li><li>10 images/month</li><li>5 image edits/month</li><li>5 basic code tasks/month</li></ul></div>
+  <div class="plan hot"><strong>AI Pro</strong><div class="price">3 KWD</div><div class="small">Kuwait / month • $8 international</div><ul><li>300 chat/month</li><li>30 CV/month</li><li>50 job + 50 interview/month</li><li>40 file analyses/month</li><li>60 images + 30 edits/month</li><li>30 code tasks/month</li></ul></div>
+  <div class="plan hot"><strong>Builder Pro</strong><div class="price">5 KWD</div><div class="small">Kuwait / month • $15 international</div><ul><li>Everything in AI Pro</li><li>Website Builder: 30/month</li><li>App Builder: 20/month</li><li>Advanced code: 200/month</li><li>Higher image/file limits</li></ul></div>
+  <div class="plan"><strong>Engineering Pro</strong><div class="price">7 KWD</div><div class="small">Kuwait / month • $22 international</div><ul><li>Everything in Builder Pro</li><li>Engineering CAD: 60/month</li><li>Oil & Gas / piping / construction</li><li>AutoCAD script / AutoLISP concepts</li><li>Highest professional limits</li></ul></div>
+ </div>
+ <div class="note">Payment checkout is the only merchant-specific part not hard-wired into this package. Until a Kuwait/international payment gateway is connected, the included Admin Activation screen lets you manually activate a paid plan and add video credits after receiving payment.</div>
+</div></div>
+
+<div class="modal" id="usageModal"><div class="modalcard" style="max-width:650px">
+ <div class="modalhead"><div><h2 style="margin:0">My Usage</h2><div class="small" id="usagePlan"></div></div><button class="iconbtn closeModal">×</button></div>
+ <div class="usagegrid" id="usageGrid"></div>
+</div></div>
+
+<div class="modal" id="adminModal"><div class="modalcard" style="max-width:520px">
+ <div class="modalhead"><div><h2 style="margin:0">Admin Activation</h2><div class="small">For manual paid activation until payment checkout is connected.</div></div><button class="iconbtn closeModal">×</button></div>
+ <div class="form">
+  <input id="adminKey" type="password" placeholder="ADMIN_KEY">
+  <input id="adminEmail" type="email" placeholder="Customer email">
+  <select id="adminPlan"><option value="">Keep current plan</option><option value="free">Free</option><option value="ai_pro">AI Pro</option><option value="builder">Builder Pro</option><option value="engineering">Engineering Pro</option></select>
+  <input id="adminCredits" type="number" min="0" step="1" placeholder="Add video credits (optional)">
+  <div class="error" id="adminError"></div>
+  <button class="primary" id="adminSubmit">Update customer</button>
+ </div>
+</div></div>
+
+<script>
+const BASE="https://datacore-ai-api.datacore-solutionswork.workers.dev";
+let token=localStorage.getItem("datacore_v5_token")||"", user=null, attachedFile=null, history=[];
+let authMode="login";
+const input=document.getElementById("input"),messages=document.getElementById("messages"),welcome=document.getElementById("welcome"),fileInput=document.getElementById("fileInput");
+
+function headers(json=false){const h={};if(token)h.Authorization="Bearer "+token;if(json)h["Content-Type"]="application/json";return h}
+function esc(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function md(t){
+ let x=esc(t||""),blocks=[];
+ x=x.replace(/```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g,(_,lang,c)=>{let k="@@C"+blocks.length+"@@";blocks.push(`<pre data-lang="${lang}"><code>${c.trim()}</code></pre>`);return k});
+ let out="",ul=false,ol=false;const close=()=>{if(ul){out+="</ul>";ul=false}if(ol){out+="</ol>";ol=false}};
+ for(let raw of x.split(/\r?\n/)){let l=raw.trimEnd();if(/^@@C\d+@@$/.test(l.trim())){close();out+=l.trim();continue}if(!l.trim()){close();continue}
+ l=l.replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/`([^`]+)`/g,"<code>$1</code>");
+ if(/^###\s+/.test(l)){close();out+="<h3>"+l.replace(/^###\s+/,"")+"</h3>"}else if(/^##\s+/.test(l)){close();out+="<h2>"+l.replace(/^##\s+/,"")+"</h2>"}else if(/^#\s+/.test(l)){close();out+="<h1>"+l.replace(/^#\s+/,"")+"</h1>"}else if(/^[-*]\s+/.test(l)){if(ol){out+="</ol>";ol=false}if(!ul){out+="<ul>";ul=true}out+="<li>"+l.replace(/^[-*]\s+/,"")+"</li>"}else if(/^\d+\.\s+/.test(l)){if(ul){out+="</ul>";ul=false}if(!ol){out+="<ol>";ol=true}out+="<li>"+l.replace(/^\d+\.\s+/,"")+"</li>"}else{close();out+="<p>"+l+"</p>"}}
+ close();blocks.forEach((b,i)=>out=out.replace("@@C"+i+"@@",b));return out;
+}
+function btn(label,fn){let b=document.createElement("button");b.className="mini";b.textContent=label;b.onclick=fn;return b}
+function render(){messages.innerHTML="";welcome.style.display=history.length?"none":"block";history.forEach(renderMessage)}
+function renderMessage(m){
+ let row=document.createElement("div");row.className="msg "+m.role;if(m.role==="assistant"){let a=document.createElement("div");a.className="avatar";a.textContent="AI";row.appendChild(a)}
+ let w=document.createElement("div");w.className="wrap";
+ if(m.kind==="image"&&m.url){let c=document.createElement("div");c.className="bubble imagecard";c.innerHTML=`<p>${esc(m.content||"Image result")}</p><img src="${m.url}">`;w.appendChild(c);let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Download",()=>downloadUrl(m.url,"datacore-ai-image.jpg")));ac.appendChild(btn("Edit this image",()=>attachGeneratedImage(m.url)));w.appendChild(ac)}
+ else if(m.kind==="video"&&m.url){let c=document.createElement("div");c.className="bubble videocard";c.innerHTML=`<p>${esc(m.content||"Video result")}</p><video controls playsinline src="${m.url}"></video>`;w.appendChild(c);let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Open video",()=>window.open(m.url,"_blank")));w.appendChild(ac)}
+ else{let b=document.createElement("div");b.className="bubble";b.innerHTML=m.role==="assistant"?md(m.content):esc(m.content).replace(/\n/g,"<br>");w.appendChild(b);if(m.role==="assistant"){let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Copy",()=>navigator.clipboard.writeText(m.content||"")));ac.appendChild(btn("Download",()=>downloadText(m.content||"",m.artifact?.name||"datacore-ai-result.txt")));if(m.artifact?.kind==="website")ac.appendChild(btn("Save HTML",()=>saveCode(m.content,"index.html","html")));if(m.artifact?.kind==="cad")ac.appendChild(btn("Save CAD Script",()=>saveCode(m.content,"datacore-engineering.scr","scr")));w.appendChild(ac)}}
+ row.appendChild(w);messages.appendChild(row)
+}
+function downloadText(t,name){let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/plain"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+function downloadUrl(url,name){let a=document.createElement("a");a.href=url;a.download=name;a.click()}
+function saveCode(text,name,lang){let rx=new RegExp("```"+lang+"\\s*([\\s\\S]*?)```","i"),m=text.match(rx);if(!m)m=text.match(/```[a-zA-Z0-9_-]*\s*([\s\S]*?)```/);if(!m){alert("No code block found.");return}let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([m[1]],{type:name.endsWith(".html")?"text/html":"text/plain"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
+function autoGrow(){input.style.height="auto";input.style.height=Math.min(input.scrollHeight,155)+"px"}
+function showModal(id){document.getElementById(id).classList.add("show")}function hideModal(id){document.getElementById(id).classList.remove("show")}
+function closeDrawer(){document.getElementById("drawer").classList.remove("open")}
+function setUserUI(){document.getElementById("planPill").textContent=user?({free:"Free",ai_pro:"AI Pro",builder:"Builder Pro",engineering:"Engineering Pro"}[user.plan]||user.plan):"Sign in";document.getElementById("userLine").textContent=user?`${user.email}\n${document.getElementById("planPill").textContent} • Video credits: ${user.video_credits}`:"Not signed in"}
+async function api(path,opts={}){const r=await fetch(BASE+path,opts);let d;try{d=await r.json()}catch{throw new Error("Invalid server response.")}if(!r.ok||!d.ok)throw Object.assign(new Error(d.error||"Request failed."),{code:d.code,status:r.status});return d}
+async function me(){if(!token){user=null;setUserUI();showModal("authModal");return}try{let d=await api("/api/me",{headers:headers()});user=d.user;setUserUI();await loadHistory()}catch{token="";localStorage.removeItem("datacore_v5_token");user=null;setUserUI();showModal("authModal")}}
+async function loadHistory(){try{let d=await api("/api/history",{headers:headers()});history=(d.messages||[]).map(x=>({role:x.role,kind:x.kind||"text",content:x.content}));render()}catch{}}
+async function doAuth(){let email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value,err=document.getElementById("authError");err.textContent="";try{let d=await api(authMode==="signup"?"/api/signup":"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});token=d.token;localStorage.setItem("datacore_v5_token",token);user=d.user;hideModal("authModal");setUserUI();await loadHistory()}catch(e){err.textContent=e.message}}
+function clearAttachment(){attachedFile=null;fileInput.value="";document.getElementById("attachment").classList.remove("show");document.getElementById("thumb").src="";document.getElementById("thumb").style.display="none";document.getElementById("fileIcon").style.display="grid"}
+function showAttachment(file,url=null){attachedFile=file;document.getElementById("attachment").classList.add("show");document.getElementById("fileName").textContent=file.name;document.getElementById("fileMeta").textContent=Math.round(file.size/1024)+" KB";if(file.type.startsWith("image/")&&url){document.getElementById("thumb").src=url;document.getElementById("thumb").style.display="block";document.getElementById("fileIcon").style.display="none"}}
+function resizeImage(file,max=500){return new Promise((resolve,reject)=>{let fr=new FileReader();fr.onload=()=>{let im=new Image();im.onload=()=>{let s=Math.min(1,max/Math.max(im.width,im.height)),w=Math.max(1,Math.round(im.width*s)),h=Math.max(1,Math.round(im.height*s)),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0,w,h);c.toBlob(b=>b?resolve(new File([b],"uploaded-image.jpg",{type:"image/jpeg"})):reject(new Error("Could not prepare image.")),"image/jpeg",.88)};im.onerror=()=>reject(new Error("Please use JPG, PNG or WebP."));im.src=fr.result};fr.onerror=()=>reject(new Error("Could not read image."));fr.readAsDataURL(file)})}
+async function pickFile(file){try{if(file.type.startsWith("image/")){let f=await resizeImage(file);showAttachment(f,URL.createObjectURL(f))}else showAttachment(file)}catch(e){alert(e.message)}}
+async function attachGeneratedImage(url){let blob=await (await fetch(url)).blob();let f=new File([blob],"generated-image.jpg",{type:"image/jpeg"});showAttachment(f,url);input.value="Edit this image: ";input.focus();autoGrow()}
+async function send(){
+ if(!user){showModal("authModal");return}
+ let prompt=input.value.trim(),file=attachedFile;if(!prompt&&!file)return;
+ history.push({role:"user",kind:"text",content:(file?`📎 ${file.name}\n`:"")+(prompt||"Analyze this file")},{role:"assistant",kind:"text",content:"Working…"});render();let idx=history.length-1;input.value="";autoGrow();document.getElementById("sendBtn").disabled=true;
+ try{let fd=new FormData();fd.append("prompt",prompt);if(file)fd.append("file",file,file.name);let d=await api("/api/ai",{method:"POST",headers:headers(),body:fd});if(d.type==="image")history[idx]={role:"assistant",kind:"image",content:d.reply,url:d.imageDataUrl};else if(d.type==="video")history[idx]={role:"assistant",kind:"video",content:d.reply,url:d.videoUrl};else history[idx]={role:"assistant",kind:"text",content:d.reply,artifact:d.artifact||null};clearAttachment();await refreshMeOnly()}catch(e){history[idx]={role:"assistant",kind:"text",content:"Error: "+e.message};if(["UPGRADE_REQUIRED","LIMIT_REACHED","VIDEO_CREDITS_REQUIRED","VIDEO_BILLING_REQUIRED"].includes(e.code))showModal("plansModal")}
+ render();document.getElementById("sendBtn").disabled=false;window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"})
+}
+async function refreshMeOnly(){try{let d=await api("/api/me",{headers:headers()});user=d.user;setUserUI()}catch{}}
+async function showUsage(){try{let d=await api("/api/me",{headers:headers()});user=d.user;setUserUI();document.getElementById("usagePlan").textContent=({free:"Free",ai_pro:"AI Pro",builder:"Builder Pro",engineering:"Engineering Pro"}[user.plan]||user.plan)+` • Video credits: ${user.video_credits}`;let g=document.getElementById("usageGrid");g.innerHTML="";Object.entries(d.usage||{}).forEach(([k,v])=>{let x=document.createElement("div");x.className="usageitem";x.innerHTML=`<strong>${esc(k.replace(/_/g," "))}</strong><div>${v.used} / ${v.limit} per ${v.period}</div>`;g.appendChild(x)});showModal("usageModal")}catch(e){alert(e.message)}}
+async function adminUpdate(){let err=document.getElementById("adminError");err.textContent="";try{let d=await api("/api/admin/set-user",{method:"POST",headers:{"Content-Type":"application/json","X-Admin-Key":document.getElementById("adminKey").value},body:JSON.stringify({email:document.getElementById("adminEmail").value,plan:document.getElementById("adminPlan").value||null,addVideoCredits:Number(document.getElementById("adminCredits").value||0)})});err.style.color="#8ef0c7";err.textContent=`Updated: ${d.user.email} • ${d.user.plan} • video credits ${d.user.video_credits}`}catch(e){err.style.color="#ff9aa4";err.textContent=e.message}}
+document.getElementById("loginTab").onclick=()=>{authMode="login";document.getElementById("loginTab").classList.add("active");document.getElementById("signupTab").classList.remove("active");document.getElementById("authSubmit").textContent="Sign in"};
+document.getElementById("signupTab").onclick=()=>{authMode="signup";document.getElementById("signupTab").classList.add("active");document.getElementById("loginTab").classList.remove("active");document.getElementById("authSubmit").textContent="Create free account"};
+document.getElementById("authSubmit").onclick=doAuth;document.getElementById("attachBtn").onclick=()=>fileInput.click();fileInput.onchange=()=>{let f=fileInput.files[0];if(f)pickFile(f)};document.getElementById("removeFile").onclick=clearAttachment;document.getElementById("sendBtn").onclick=send;input.addEventListener("input",autoGrow);input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});
+document.querySelectorAll("[data-prompt]").forEach(b=>b.onclick=()=>{input.value=b.dataset.prompt;autoGrow();input.focus()});document.getElementById("menuBtn").onclick=()=>document.getElementById("drawer").classList.add("open");document.getElementById("shade").onclick=closeDrawer;
+document.getElementById("newChat").onclick=async()=>{if(user)try{await api("/api/history/clear",{method:"POST",headers:headers()})}catch{}history=[];render();closeDrawer()};
+document.getElementById("usageBtn").onclick=()=>{closeDrawer();showUsage()};document.getElementById("plansBtn").onclick=()=>{closeDrawer();showModal("plansModal")};document.getElementById("adminBtn").onclick=()=>{closeDrawer();showModal("adminModal")};document.getElementById("adminSubmit").onclick=adminUpdate;
+document.getElementById("fxBtn").onclick=()=>{document.body.classList.toggle("pausefx");document.getElementById("fxBtn").textContent=document.body.classList.contains("pausefx")?"✨ Play animations":"✨ Pause animations"};
+document.getElementById("logoutBtn").onclick=async()=>{try{if(token)await api("/api/logout",{method:"POST",headers:headers()})}catch{}token="";user=null;history=[];localStorage.removeItem("datacore_v5_token");render();setUserUI();closeDrawer();showModal("authModal")};
+document.querySelectorAll(".closeModal").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("show"));document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m&&m.id!=="authModal")m.classList.remove("show")}));
+render();setUserUI();me();
+</script>
+</body>
+</html>
