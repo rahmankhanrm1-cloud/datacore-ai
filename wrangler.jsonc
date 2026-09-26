@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "datacore-ai-api",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-25",
+  "ai": {
+    "binding": "AI"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "datacore-ai-db",
+      "database_id": "4b26c4b6-27a5-4bdd-9127-256244b297eb"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "datacore-ai-files"
+    }
+  ]
+}
