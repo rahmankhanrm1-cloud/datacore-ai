@@ -477,7 +477,7 @@ async function handleGoogleAuth(request, env) {
     if (a?.status === "suspended") return json(request, { ok: false, error: "This account is suspended. Contact support." }, 403);
     if (a?.google_sub && a.google_sub !== sub) return json(request, { ok: false, error: "This email is linked to a different Google identity." }, 409);
     const provider = !a ? "email+google" : (a.auth_provider === "email" ? "email+google" : (a.auth_provider || "google"));
-    await ensureAccount(env, u.id, provider, { google_sub: sub, display_name: g.name || null, picture_url: g.picture || null, last_login_at: t });
+    await ensureAccount(env, u.id, provider, { auth_provider: provider, google_sub: sub, display_name: g.name || null, picture_url: g.picture || null, last_login_at: t });
   }
   const token = await createSession(env, u.id);
   const account = await env.DB.prepare("SELECT status,auth_provider,display_name,picture_url,subscription_ends_at FROM user_accounts WHERE user_id=?").bind(u.id).first();

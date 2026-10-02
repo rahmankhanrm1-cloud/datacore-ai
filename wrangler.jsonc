@@ -6,8 +6,9 @@
   "vars": {
     "PUBLIC_APP_URL": "https://rahmankhanrm1-cloud.github.io/datacore-ai/",
     "MYFATOORAH_MODE": "test",
-"OWNER_EMAIL": "datacore.solutionswork@gmail.com"
-},
+    "OWNER_EMAIL": "datacore.solutionswork@gmail.com",
+    "GOOGLE_CLIENT_ID": "1021980839676-1ors7bt5kd27il5cs7c9q56725ikd91t.apps.googleusercontent.com"
+  },
   "ai": {
     "binding": "AI"
   },
