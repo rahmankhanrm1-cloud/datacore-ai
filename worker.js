@@ -271,6 +271,7 @@ async function authUser(request, env) {
     row.plan = "free"; row.subscription_started_at = null; row.subscription_ends_at = null;
   }
   row.is_admin = isAdminUser(env, row);
+  row.owner_unlimited = row.is_admin;
   return row;
 }
 async function requireUser(request, env) {
@@ -450,7 +451,7 @@ async function handleLogin(request, env) {
   if (h !== u.password_hash) return json(request, { ok: false, error: "Invalid email or password." }, 401);
   await ensureAccount(env, u.id, u.auth_provider || "email", { last_login_at: now() });
   const token = await createSession(env, u.id);
-  return json(request, { ok: true, token, user: { id: u.id, email: u.email, plan: u.plan, video_credits: u.video_credits, status: u.status, auth_provider: u.auth_provider || "email", is_admin: isAdminUser(env, u) } });
+  return json(request, { ok: true, token, user: { id: u.id, email: u.email, plan: u.plan, video_credits: u.video_credits, status: u.status, auth_provider: u.auth_provider || "email", is_admin: isAdminUser(env, u), owner_unlimited: isAdminUser(env, u) } });
 }
 async function verifyGoogleCredential(env, credential) {
   if (!env.GOOGLE_CLIENT_ID) throw new Error("Google sign-in is not configured yet.");
@@ -483,7 +484,7 @@ async function handleGoogleAuth(request, env) {
   }
   const token = await createSession(env, u.id);
   const account = await env.DB.prepare("SELECT status,auth_provider,display_name,picture_url,subscription_ends_at FROM user_accounts WHERE user_id=?").bind(u.id).first();
-  return json(request, { ok: true, token, user: { ...u, ...account, is_admin: isAdminUser(env, u) } });
+  return json(request, { ok: true, token, user: { ...u, ...account, is_admin: isAdminUser(env, u), owner_unlimited: isAdminUser(env, u) } });
 }
 
 function myFatoorahBase(env) { return String(env.MYFATOORAH_MODE || "test").toLowerCase() === "live" ? "https://api.myfatoorah.com" : "https://apitest.myfatoorah.com"; }
