@@ -1,0 +1,54 @@
+name: Deploy NibrasGPT Cloudflare Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'worker.js'
+      - 'wrangler.jsonc'
+      - '.github/workflows/deploy-cloudflare-worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nibrasgpt-cloudflare-worker-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy production API
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check Cloudflare credentials
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CF_TOKEN" ] || [ -z "$CF_ACCOUNT" ]; then
+            echo '::error::Cloudflare deployment requires CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in GitHub repository Actions secrets.'
+            exit 1
+          fi
+
+      - name: Deploy existing Cloudflare Worker
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --config wrangler.jsonc --keep-vars
+
+      - name: Verify live API branding
+        run: |
+          set -eu
+          URL='https://datacore-ai-api.datacore-solutionswork.workers.dev/'
+          RESPONSE="$(curl --fail --silent --show-error --location --max-time 20 --retry 4 --retry-delay 4 "$URL")"
+          printf '%s' "$RESPONSE" | grep -F '"name":"NibrasGPT"' > /dev/null || {
+            echo '::error::Worker did not return the expected NibrasGPT branding. Check the Worker endpoint and deployment.'
+            exit 1
+          }
+          echo 'Cloudflare Worker is responding with NibrasGPT branding.'
