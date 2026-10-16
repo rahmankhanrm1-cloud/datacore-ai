@@ -263,7 +263,7 @@ async function authUser(request, env) {
       a.last_login_at,a.subscription_started_at,a.subscription_ends_at
       FROM users u LEFT JOIN user_accounts a ON a.user_id=u.id WHERE u.id=?`).bind(row.id).first();
   }
-  if (row.plan !== "free" && row.subscription_ends_at && Number(row.subscription_ends_at) <= now()) {
+  if (!isAdminUser(env, row) && row.plan !== "free" && row.subscription_ends_at && Number(row.subscription_ends_at) <= now()) {
     await env.DB.batch([
       env.DB.prepare("UPDATE users SET plan='free' WHERE id=?").bind(row.id),
       env.DB.prepare("UPDATE user_accounts SET subscription_started_at=NULL,subscription_ends_at=NULL,updated_at=? WHERE user_id=?").bind(now(), row.id),
@@ -271,6 +271,7 @@ async function authUser(request, env) {
     row.plan = "free"; row.subscription_started_at = null; row.subscription_ends_at = null;
   }
   row.is_admin = isAdminUser(env, row);
+  row.owner_unlimited = row.is_admin;
   return row;
 }
 async function requireUser(request, env) {
@@ -299,11 +300,13 @@ async function usageSummary(env, user) {
   const plan = PLAN_LIMITS[user.plan] ? user.plan : "free"; const limits = PLAN_LIMITS[plan], out = {};
   for (const [metric, spec] of Object.entries(limits)) {
     const u = await usageCount(env, user.id, metric, spec.period);
-    out[metric] = { used: u.count, limit: spec.limit, period: spec.period };
+    out[metric] = isAdminUser(env, user) ? { used: u.count, limit: null, period: "unlimited", unlimited: true } : { used: u.count, limit: spec.limit, period: spec.period };
   }
   return out;
 }
 async function checkLimit(env, user, metric) {
+  // Trusted server-side owner identity only: never accept a client-provided admin flag.
+  if (isAdminUser(env, user)) return { ok: true, owner_unlimited: true };
   if (metric === "video") {
     if (Number(user.video_credits || 0) <= 0) return { ok: false, code: "VIDEO_CREDITS_REQUIRED", message: "Video generation requires video credits." };
     return { ok: true, video: true };
@@ -359,7 +362,7 @@ function metricFor(intent, file) {
   if (file) return "file"; return "chat";
 }
 function systemFor(intent) {
-  const base = "You are DataCore AI. Be accurate, practical and professional. Never invent user facts.";
+  const base = "You are NibrasGPT. Be accurate, practical and professional. Never invent user facts.";
   const map = {
     chat: `${base} Answer the user's request directly.`,
     cv: `${base} You are an ATS CV/Resume specialist for all industries. Use only supplied facts. Mark missing critical information as [Add details]. Use clear headings and strong concise bullet points.`,
@@ -448,7 +451,7 @@ async function handleLogin(request, env) {
   if (h !== u.password_hash) return json(request, { ok: false, error: "Invalid email or password." }, 401);
   await ensureAccount(env, u.id, u.auth_provider || "email", { last_login_at: now() });
   const token = await createSession(env, u.id);
-  return json(request, { ok: true, token, user: { id: u.id, email: u.email, plan: u.plan, video_credits: u.video_credits, status: u.status, auth_provider: u.auth_provider || "email", is_admin: isAdminUser(env, u) } });
+  return json(request, { ok: true, token, user: { id: u.id, email: u.email, plan: u.plan, video_credits: u.video_credits, status: u.status, auth_provider: u.auth_provider || "email", is_admin: isAdminUser(env, u), owner_unlimited: isAdminUser(env, u) } });
 }
 async function verifyGoogleCredential(env, credential) {
   if (!env.GOOGLE_CLIENT_ID) throw new Error("Google sign-in is not configured yet.");
@@ -481,7 +484,7 @@ async function handleGoogleAuth(request, env) {
   }
   const token = await createSession(env, u.id);
   const account = await env.DB.prepare("SELECT status,auth_provider,display_name,picture_url,subscription_ends_at FROM user_accounts WHERE user_id=?").bind(u.id).first();
-  return json(request, { ok: true, token, user: { ...u, ...account, is_admin: isAdminUser(env, u) } });
+  return json(request, { ok: true, token, user: { ...u, ...account, is_admin: isAdminUser(env, u), owner_unlimited: isAdminUser(env, u) } });
 }
 
 function myFatoorahBase(env) { return String(env.MYFATOORAH_MODE || "test").toLowerCase() === "live" ? "https://api.myfatoorah.com" : "https://apitest.myfatoorah.com"; }
@@ -529,6 +532,7 @@ async function updatePaymentFromProvider(env, payment, data) {
   return await env.DB.prepare("SELECT * FROM payments WHERE id=?").bind(payment.id).first();
 }
 async function handleCreatePayment(request, env, user) {
+  if (isAdminUser(env, user)) return json(request, { ok: false, code: "OWNER_NO_PAYMENT", error: "Owner access is unlimited; no subscription purchase is needed." }, 403);
   if (!env.MYFATOORAH_API_KEY) return json(request, { ok: false, error: "Payments are not enabled yet. Merchant setup is still required.", code: "PAYMENT_NOT_CONFIGURED" }, 503);
   const b = await request.json(), plan = String(b.plan || "");
   if (!PLAN_PRICES[plan]) return json(request, { ok: false, error: "Choose a paid plan." }, 400);
@@ -684,7 +688,7 @@ async function handleAI(request, env, user) {
       if (/billing|credit|payment|unified|permission/i.test(msg)) return json(request, { ok: false, code: "VIDEO_BILLING_REQUIRED", error: "Video generation is connected, but your Cloudflare account needs Unified Billing/prepaid AI credits before the third-party video model can run." }, 402);
       throw e;
     }
-    await decrementVideoCredit(env, user.id); await storeMessage(env, user.id, "assistant", "video", "Generated video.");
+    if (!isAdminUser(env, user)) await decrementVideoCredit(env, user.id); await storeMessage(env, user.id, "assistant", "video", "Generated video.");
     return json(request, { ok: true, type: "video", intent, reply: "Here is your generated video.", videoUrl });
   }
   let answer;
@@ -721,7 +725,7 @@ export default {
       if (request.method === "GET" && path === "/api/config") {
         return json(request, { ok: true, version: "6.0", google_enabled: !!env.GOOGLE_CLIENT_ID, google_client_id: env.GOOGLE_CLIENT_ID || "", payments_enabled: !!env.MYFATOORAH_API_KEY, payment_provider: "MyFatoorah", payment_mode: String(env.MYFATOORAH_MODE || "test"), plans: Object.entries(PLAN_PRICES).map(([id,p]) => ({ id, label: planLabel(id), kwd: p.kwd, usd: p.usd })) });
       }
-      if (request.method === "GET" && path === "/") return json(request, { ok: true, name: "DataCore AI", version: "6.0", features: ["email-auth","google-auth","admin-dashboard","user-controls","myfatoorah-payments","auto-plan-activation","server-usage","chat","image","documents","website","app","code","cad","text-video","image-video","pwa"] });
+      if (request.method === "GET" && path === "/") return json(request, { ok: true, name: "NibrasGPT", version: "6.0", features: ["email-auth","google-auth","admin-dashboard","user-controls","myfatoorah-payments","auto-plan-activation","server-usage","chat","image","documents","website","app","code","cad","text-video","image-video","pwa"] });
 
       if (request.method === "POST" && path === "/api/signup") return await handleSignup(request, env);
       if (request.method === "POST" && path === "/api/login") return await handleLogin(request, env);
@@ -732,7 +736,7 @@ export default {
 
       if (request.method === "GET" && path === "/api/me") {
         const a = await requireUser(request, env); if (a.error) return a.error;
-        return json(request, { ok: true, user: a.user, plan_label: planLabel(a.user.plan), usage: await usageSummary(env, a.user) });
+        return json(request, { ok: true, user: a.user, plan_label: a.user.is_admin ? "Owner Unlimited" : planLabel(a.user.plan), usage: await usageSummary(env, a.user) });
       }
       if (request.method === "GET" && path === "/api/history") {
         const a = await requireUser(request, env); if (a.error) return a.error;
@@ -746,7 +750,7 @@ export default {
       if (request.method === "GET" && path === "/api/billing") {
         const a = await requireUser(request, env); if (a.error) return a.error;
         const r = await env.DB.prepare("SELECT * FROM payments WHERE user_id=? ORDER BY created_at DESC LIMIT 30").bind(a.user.id).all();
-        return json(request, { ok: true, plan: a.user.plan, plan_label: planLabel(a.user.plan), subscription_started_at: a.user.subscription_started_at || null, subscription_ends_at: a.user.subscription_ends_at || null, payments: (r.results || []).map(sanitizePayment), payments_enabled: !!env.MYFATOORAH_API_KEY, provider: "MyFatoorah" });
+        return json(request, { ok: true, plan: a.user.plan, plan_label: a.user.is_admin ? "Owner Unlimited" : planLabel(a.user.plan), subscription_started_at: a.user.subscription_started_at || null, subscription_ends_at: a.user.subscription_ends_at || null, payments: (r.results || []).map(sanitizePayment), payments_enabled: !!env.MYFATOORAH_API_KEY, provider: "MyFatoorah" });
       }
       if (request.method === "POST" && path === "/api/payments/create") {
         const a = await requireUser(request, env); if (a.error) return a.error; return await handleCreatePayment(request, env, a.user);
