@@ -1,3 +1,5 @@
+import { notionReadOnly } from "./notion-read.js";
+
 const CORS_BASE = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Key",
@@ -772,6 +774,15 @@ export default {
           env.DB.prepare("DELETE FROM users WHERE id=?").bind(a.user.id),
         ]);
         return json(request, { ok: true });
+      }
+      if (request.method === "GET" && (path === "/api/integrations/notion/status" || path === "/api/integrations/notion/list")) {
+        const admin = await requireAdmin(request, env);
+        if (admin.error) return admin.error;
+        const action = path.endsWith("/status") ? "status" : "list";
+        if (action === "list" && !(await enforceAuthRate(request, env, "notion-read", 60))) {
+          return json(request, { ok: false, error: "Too many Notion requests. Try again later.", code: "NOTION_LIMIT" }, 429);
+        }
+        return await notionReadOnly(request, env, action, (body, status = 200) => json(request, body, status));
       }
       if (request.method === "GET" && path === "/api/admin/dashboard") return await adminDashboard(request, env);
       if (request.method === "POST" && path === "/api/admin/user") return await adminUpdateUser(request, env);
