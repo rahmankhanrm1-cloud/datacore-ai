@@ -1,0 +1,34 @@
+name: Test Notion read-only pilot
+
+on:
+  push:
+    branches: [feature/notion-integration-plan-20261018]
+    paths:
+      - 'notion-read.js'
+      - 'worker.js'
+      - 'tests/notion-read.test.mjs'
+      - '.github/workflows/test-notion-read.yml'
+  pull_request:
+    paths:
+      - 'notion-read.js'
+      - 'worker.js'
+      - 'tests/notion-read.test.mjs'
+      - '.github/workflows/test-notion-read.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check module and Worker syntax
+        run: |
+          node --check worker.js
+          node --check notion-read.js
+      - name: Run Notion read-only unit tests
+        run: node --test tests/notion-read.test.mjs
