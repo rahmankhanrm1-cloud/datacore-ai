@@ -57,10 +57,10 @@ export async function notionReadOnly(request, env, action, jsonResult) {
   if (action === "status") {
     return jsonResult({
       ok: true,
-      enabled: false,
+      enabled: configured,
       configured,
       mode: "owner-only-read-only",
-      message: configured ? "Credential is provisioned. Pilot is not deployed automatically." : "Set NOTION_API_TOKEN using Cloudflare Worker secrets to enable this pilot.",
+      message: configured ? "Credential is provisioned for owner-only read access." : "Set NOTION_API_TOKEN using Cloudflare Worker secrets to enable this pilot.",
       sources: Object.keys(APPROVED_SOURCES),
     });
   }
