@@ -6,9 +6,14 @@ let pendingPdfUrl = null;
 const pdfUrls = new Set();
 let mediaRecorder = null;
 
+function updateChatModelVisibility() {
+  el("chatModel").hidden = !config?.nemotron_enabled || toolMode === "image" || toolMode === "video";
+}
+
 function setMode(mode) {
   toolMode = mode;
   el("toolMode").value = mode;
+  updateChatModelVisibility();
   el("mediaControls").hidden = mode !== "image" && mode !== "video";
   el("mediaFormat").value = mode === "video" ? "landscape" : "square";
   input.placeholder = ({

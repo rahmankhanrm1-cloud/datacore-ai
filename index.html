@@ -57,6 +57,9 @@
       <select id="mediaFormat" aria-label="Media format"><option value="square">Square</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select>
       <select id="mediaStyle" aria-label="Media style"><option value="realistic">Realistic</option><option value="creative">Follow prompt style</option></select>
     </div>
+    <select id="chatModel" aria-label="Chat model" hidden>
+      <option value="default">Default model</option><option value="nemotron">NVIDIA Nemotron</option>
+    </select>
     <select id="voiceLanguage" aria-label="Dictation language"><option value="">Voice · Auto</option><option value="ar">العربية</option><option value="en">English</option></select>
   </div>
   <div class="composer"><button class="attach" id="attachBtn" aria-label="Attach file">＋</button><textarea id="input" rows="1" aria-label="Message" dir="auto" placeholder="Ask or create…"></textarea><button class="mic" id="voiceBtn" aria-label="Toggle voice recording" aria-pressed="false">Mic</button><button class="send" id="sendBtn">Send</button></div>
@@ -216,7 +219,7 @@ function downloadText(t,name){let a=document.createElement("a");a.href=URL.creat
 function autoGrow(){input.style.height="auto";input.style.height=Math.min(input.scrollHeight,155)+"px"}function showModal(id){document.getElementById(id).classList.add("show")}function hideModal(id){document.getElementById(id).classList.remove("show")}function closeDrawer(){document.getElementById("drawer").classList.remove("open")}
 function setUserUI(){el("digestBtn").hidden=!user?.is_admin;el("digestMenuBtn").hidden=!user?.is_admin;el("signInBtn").textContent=user?"Account":"Sign in";const label=user?(user.owner_unlimited===true?"Owner Unlimited":({free:"Free",ai_pro:"AI Pro",builder:"Builder Pro",engineering:"Engineering Pro"}[user.plan]||user.plan)):"Sign in";document.getElementById("planPill").textContent=label;document.getElementById("userLine").textContent=user?user.email:"Not signed in";document.getElementById("authLine").textContent=user?(user.owner_unlimited===true?`Unlimited • No expiry • ${user.auth_provider||"email"}`:`${label} • ${user.auth_provider||"email"} • Video credits: ${user.video_credits}`):"";document.getElementById("adminBtn").style.display=user?.is_admin?"block":"none";document.getElementById("adminPill").style.display=user?.is_admin?"block":"none";const img=document.getElementById("profileImg");if(user?.picture_url){img.src=user.picture_url;img.style.display="block"}else img.style.display="none"}
 async function api(path,opts={}){const r=await fetch(BASE+path,opts);let d;try{d=await r.json()}catch{throw new Error("Invalid server response.")}if(!r.ok||!d.ok)throw Object.assign(new Error(d.error||"Request failed."),{code:d.code,status:r.status,data:d});return d}
-async function loadConfig(){try{config=await api("/api/config");document.getElementById("paymentProviderLine").textContent=config.payments_enabled?`${config.payment_provider} checkout • ${config.payment_mode.toUpperCase()} mode`:"Payment gateway not configured yet";setupGoogle()}catch(e){config={google_enabled:false,payments_enabled:false};document.getElementById("paymentProviderLine").textContent="Could not load payment configuration"}}
+async function loadConfig(){try{config=await api("/api/config");document.getElementById("paymentProviderLine").textContent=config.payments_enabled?`${config.payment_provider} checkout • ${config.payment_mode.toUpperCase()} mode`:"Payment gateway not configured yet";setupGoogle();updateChatModelVisibility()}catch(e){config={google_enabled:false,payments_enabled:false};updateChatModelVisibility();document.getElementById("paymentProviderLine").textContent="Could not load payment configuration"}}
 function setupGoogle(){const wrap=document.getElementById("googleBtnWrap");if(!config?.google_enabled){wrap.innerHTML='<div class="small">Google sign-in will appear after GOOGLE_CLIENT_ID is configured.</div>';return}const tryInit=()=>{if(!window.google?.accounts?.id){setTimeout(tryInit,300);return}wrap.innerHTML="";google.accounts.id.initialize({client_id:config.google_client_id,callback:handleGoogleCredential,auto_select:false,cancel_on_tap_outside:true});google.accounts.id.renderButton(wrap,{theme:"filled_black",size:"large",shape:"pill",text:"continue_with",width:320})};tryInit()}
 async function handleGoogleCredential(resp){const err=document.getElementById("authError");err.textContent="";try{let d=await api("/api/auth/google",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({credential:resp.credential})});acceptAuth(d)}catch(e){err.textContent=e.message}}
 function acceptAuth(d){token=d.token;localStorage.setItem("datacore_v6_token",token);localStorage.removeItem("datacore_v5_token");user=d.user;hideModal("authModal");setUserUI();loadHistory();handlePaymentReturn()}
@@ -258,6 +261,7 @@ async function send() {
     const form = new FormData();
     form.set("prompt", prompt);
     form.set("mode", mode);
+    if (!el("chatModel").hidden) form.set("model", el("chatModel").value);
     if (mode === "video" || mode === "image") {
       form.set("format", el("mediaFormat").value);
       form.set("style", el("mediaStyle").value);

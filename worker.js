@@ -12,6 +12,8 @@ const CORS_BASE = {
 };
 
 const TEXT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+const NEMOTRON_MODEL = "nvidia/nemotron-3.5-lightning-30b-a3b";
+const NVIDIA_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
 const PLAN_LIMITS = {
@@ -380,9 +382,35 @@ function systemFor(intent) {
   };
   return map[intent] || map.chat;
 }
-async function runText(env, system, prompt) {
-  const r = await env.AI.run(TEXT_MODEL, { messages: [{ role: "system", content: system }, { role: "user", content: prompt }], max_tokens: 3000, temperature: 0.25 });
-  return r?.response || "";
+async function runText(env, system, prompt, model) {
+  const messages = [{ role: "system", content: system }, { role: "user", content: prompt }];
+  if (model !== "nemotron") {
+    const result = await env.AI.run(TEXT_MODEL, { messages, max_tokens: 3000, temperature: 0.25 });
+    return result?.response || "";
+  }
+  const key = String(env.NVIDIA_API_KEY || "").trim();
+  if (!key) throw requestError("NVIDIA Nemotron has not been configured.", 503, "NEMOTRON_NOT_CONFIGURED");
+  let response;
+  try {
+    response = await fetch(NVIDIA_CHAT_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        model: NEMOTRON_MODEL, messages, max_tokens: 3000, temperature: 0.25, stream: false,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+      redirect: "error",
+      signal: AbortSignal.timeout(45000),
+    });
+  } catch {
+    throw requestError("NVIDIA Nemotron is temporarily unavailable. Please retry or select the default model.", 502, "NEMOTRON_UNAVAILABLE");
+  }
+  if (response.status === 429) throw requestError("NVIDIA Nemotron is busy. Please retry shortly.", 429, "NEMOTRON_RATE_LIMIT");
+  if (!response.ok) throw requestError("NVIDIA Nemotron could not complete the request. Please retry or select the default model.", 502, "NEMOTRON_UNAVAILABLE");
+  const result = await response.json().catch(() => null);
+  const reply = result?.choices?.[0]?.message?.content;
+  if (typeof reply !== "string" || !reply.trim()) throw requestError("NVIDIA Nemotron returned no answer. Please retry.", 502, "NEMOTRON_EMPTY");
+  return reply;
 }
 async function convertFile(env, file) {
   if (isPlainText(file)) return (await file.text()).slice(0, 100000);
@@ -688,6 +716,8 @@ async function handleAI(request, env, user) {
   const value = form.get("file");
   const file = value instanceof File && value.size > 0 ? value : null;
   const mode = form.get("mode") || "auto";
+  const model = form.get("model") || "default";
+  if (model !== "default" && model !== "nemotron") throw requestError("Choose a supported chat model.");
   const projectId = String(form.get("project") || "");
   const project = projectId ? await findProject(env.DB, user.id, projectId) : null;
   if (!prompt && !file) throw requestError("Type a message or attach a file.");
@@ -717,7 +747,7 @@ async function handleAI(request, env, user) {
           // An older or malformed client context can be ignored.
         }
       }
-      return answerWithSources((system, text) => runText(env, system, text), question,
+      return answerWithSources((system, text) => runText(env, system, text, model), question,
         { documents, sources, instructions: isWeb ? "" : project?.instructions, history: recent });
     });
     if (project) {
@@ -748,9 +778,9 @@ async function handleAI(request, env, user) {
     return json(request, { ok: true, type: video ? "video" : "image", intent, reply, ...(video ? { videoUrl: url } : { imageDataUrl: url }) });
   }
   const answer = await useQuota(env, user, metric, async () => {
-    if (!file) return runText(env, systemFor(intent), prompt);
+    if (!file) return runText(env, systemFor(intent), prompt, model);
     const content = await convertFile(env, file);
-    return runText(env, systemFor(intent), `User request:\n${prompt || "Analyze this file and summarize the important information."}\n\nUploaded file: ${file.name}\n\nFile content:\n${content}`);
+    return runText(env, systemFor(intent), `User request:\n${prompt || "Analyze this file and summarize the important information."}\n\nUploaded file: ${file.name}\n\nFile content:\n${content}`, model);
   });
   if (!project) await storeMessage(env, user.id, "user", "text", userMessage);
   if (project) await saveProjectAnswer(env.DB, project.id, userMessage, answer, []);
@@ -786,7 +816,7 @@ export default {
         return json(request, { ok: coreOk, version: "6.0", checks, payment_mode: String(env.MYFATOORAH_MODE || "test") }, coreOk ? 200 : 500);
       }
       if (request.method === "GET" && path === "/api/config") {
-        return json(request, { ok: true, version: "6.0", google_enabled: !!env.GOOGLE_CLIENT_ID, google_client_id: env.GOOGLE_CLIENT_ID || "", payments_enabled: !!env.MYFATOORAH_API_KEY, web_search_enabled: !!env.BRAVE_SEARCH_API_KEY, payment_provider: "MyFatoorah", payment_mode: String(env.MYFATOORAH_MODE || "test"), plans: Object.entries(PLAN_PRICES).map(([id,p]) => ({ id, label: planLabel(id), kwd: p.kwd, usd: p.usd })) });
+        return json(request, { ok: true, version: "6.0", google_enabled: !!env.GOOGLE_CLIENT_ID, google_client_id: env.GOOGLE_CLIENT_ID || "", payments_enabled: !!env.MYFATOORAH_API_KEY, web_search_enabled: !!env.BRAVE_SEARCH_API_KEY, nemotron_enabled: !!String(env.NVIDIA_API_KEY || "").trim(), payment_provider: "MyFatoorah", payment_mode: String(env.MYFATOORAH_MODE || "test"), plans: Object.entries(PLAN_PRICES).map(([id,p]) => ({ id, label: planLabel(id), kwd: p.kwd, usd: p.usd })) });
       }
       if (request.method === "GET" && path === "/") return json(request, { ok: true, name: "NibrasGPT", version: "6.0", features: ["email-auth","google-auth","admin-dashboard","user-controls","myfatoorah-payments","auto-plan-activation","server-usage","chat","image","documents","website","app","code","cad","text-video","image-video","pwa"] });
 

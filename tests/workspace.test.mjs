@@ -170,3 +170,52 @@ test("voice, cited web search and owner-only Notion digests", async () => {
     globalThis.fetch = fetch;
   }
 });
+
+test("Nemotron is opt-in and keeps the NVIDIA key and errors server-side", async () => {
+  const ask = (model, prompt) => call("/api/ai", {
+    account: "owner", method: "POST", payload: form({ model, prompt }),
+  });
+  assert.equal((await (await call("/api/config")).json()).nemotron_enabled, false);
+  const disabled = await ask("nemotron", "வணக்கம்");
+  assert.equal(disabled.status, 503);
+  assert.equal((await disabled.json()).code, "NEMOTRON_NOT_CONFIGURED");
+  assert.equal((await ask("unknown", "Hello")).status, 400);
+
+  env.NVIDIA_API_KEY = "mock-nvidia-key";
+  const originalFetch = globalThis.fetch;
+  const originalRun = env.AI.run;
+  let calls = 0;
+  globalThis.fetch = async (url, options) => {
+    calls++;
+    assert.equal(url, "https://integrate.api.nvidia.com/v1/chat/completions");
+    assert.equal(options.headers.Authorization, "Bearer mock-nvidia-key");
+    const input = JSON.parse(options.body);
+    assert.equal(input.model, "nvidia/nemotron-3.5-lightning-30b-a3b");
+    assert.equal(input.stream, false);
+    if (input.messages[1].content === "retry") return new Response("upstream details", { status: 429 });
+    assert.equal(input.messages[1].content, "வணக்கம்");
+    return Response.json({ choices: [{ message: { content: "வணக்கம்!", reasoning_content: "internal" } }] });
+  };
+  env.AI.run = async model => {
+    assert.match(model, /^@cf\/meta\//);
+    return { response: "Default reply." };
+  };
+  try {
+    const config = await (await call("/api/config")).json();
+    assert.equal(config.nemotron_enabled, true);
+    assert.ok(!JSON.stringify(config).includes(env.NVIDIA_API_KEY));
+    const custom = await (await ask("nemotron", "வணக்கம்")).json();
+    assert.equal(custom.reply, "வணக்கம்!");
+    assert.ok(!JSON.stringify(custom).includes("internal"));
+    const defaultReply = await (await ask("default", "Hello")).json();
+    assert.equal(defaultReply.reply, "Default reply.");
+    assert.equal(calls, 1);
+    const retry = await ask("nemotron", "retry");
+    assert.equal(retry.status, 429);
+    assert.equal((await retry.json()).code, "NEMOTRON_RATE_LIMIT");
+  } finally {
+    globalThis.fetch = originalFetch;
+    env.AI.run = originalRun;
+    delete env.NVIDIA_API_KEY;
+  }
+});
