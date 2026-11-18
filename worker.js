@@ -1,15 +1,17 @@
+import { generateImage, generateVideo } from "./media.js";
+import {
+  answerWithSources, bytesToBase64, extractPdfPages, findProject, latestDigest, notionDigest, projectDocuments,
+  projectHistory, projectRoute, requestError, saveProjectAnswer, webSources, workspaceSchema,
+} from "./workspace.js";
 import { notionReadOnly } from "./notion-read.js";
 
 const CORS_BASE = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Key",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
 };
 
 const TEXT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
-const IMAGE_MODEL = "@cf/black-forest-labs/flux-2-klein-4b";
-const VIDEO_T2V_MODEL = "alibaba/hh1.1-t2v";
-const VIDEO_I2V_MODEL = "alibaba/hh1.1-i2v";
 const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 
 const PLAN_LIMITS = {
@@ -191,6 +193,7 @@ async function ensureSchema(env) {
       env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(user_id,created_at)"),
       env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_payments_invoice ON payments(provider_invoice_id)"),
       env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_accounts_status ON user_accounts(status)"),
+      ...workspaceSchema.map(sql => env.DB.prepare(sql)),
     ]);
   })().catch(e => { schemaPromise = null; throw e; });
   return schemaPromise;
@@ -293,11 +296,6 @@ async function usageCount(env, userId, metric, period) {
     .bind(userId, key, metric).first();
   return { key, count: Number(row?.count || 0) };
 }
-async function incrementUsage(env, userId, metric, period) {
-  const key = periodKey(period);
-  await env.DB.prepare(`INSERT INTO usage_counters(user_id,period_key,metric,count) VALUES(?,?,?,1)
-    ON CONFLICT(user_id,period_key,metric) DO UPDATE SET count=count+1`).bind(userId, key, metric).run();
-}
 async function usageSummary(env, user) {
   const plan = PLAN_LIMITS[user.plan] ? user.plan : "free"; const limits = PLAN_LIMITS[plan], out = {};
   for (const [metric, spec] of Object.entries(limits)) {
@@ -386,14 +384,6 @@ async function runText(env, system, prompt) {
   const r = await env.AI.run(TEXT_MODEL, { messages: [{ role: "system", content: system }, { role: "user", content: prompt }], max_tokens: 3000, temperature: 0.25 });
   return r?.response || "";
 }
-async function runFlux(env, prompt, sourceBlob = null) {
-  const fd = new FormData(); fd.append("prompt", prompt); fd.append("width", "1024"); fd.append("height", "1024");
-  if (sourceBlob) fd.append("input_image_0", sourceBlob, "reference.jpg");
-  const encoded = new Response(fd);
-  const r = await env.AI.run(IMAGE_MODEL, { multipart: { body: encoded.body, contentType: encoded.headers.get("content-type") } });
-  if (!r?.image) throw new Error("Image generation failed.");
-  return `data:image/jpeg;base64,${r.image}`;
-}
 async function convertFile(env, file) {
   if (isPlainText(file)) return (await file.text()).slice(0, 100000);
   const r = await env.AI.toMarkdown({ name: file.name || "upload", blob: new Blob([await file.arrayBuffer()], { type: file.type || "application/octet-stream" }) },
@@ -410,23 +400,6 @@ function artifactFor(intent) {
   if (intent === "cv") return { kind: "cv", name: "datacore-cv.txt", lang: "" };
   return null;
 }
-async function generateTextVideo(env, prompt) {
-  const r = await env.AI.run(VIDEO_T2V_MODEL, { prompt, duration: 5, ratio: "16:9", resolution: "720P", watermark: false });
-  const url = r?.result?.video || r?.video; if (!url) throw new Error("Video model did not return a video URL."); return url;
-}
-async function generateImageVideo(request, env, file, prompt) {
-  const key = `temp/${crypto.randomUUID()}.jpg`;
-  await env.FILES.put(key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type || "image/jpeg" } });
-  const origin = new URL(request.url).origin, imageUrl = `${origin}/api/public-file/${encodeURIComponent(key)}`;
-  try {
-    const r = await env.AI.run(VIDEO_I2V_MODEL, { image: imageUrl, prompt: prompt || "Animate this image naturally with smooth cinematic camera motion.", duration: 5, resolution: "720P", watermark: false });
-    const url = r?.result?.video || r?.video; if (!url) throw new Error("Video model did not return a video URL."); return url;
-  } finally { await env.FILES.delete(key); }
-}
-async function decrementVideoCredit(env, userId) {
-  await env.DB.prepare("UPDATE users SET video_credits=CASE WHEN video_credits>0 THEN video_credits-1 ELSE 0 END WHERE id=?").bind(userId).run();
-}
-
 async function handleSignup(request, env) {
   if (!(await enforceAuthRate(request, env, "signup", 10))) return json(request, { ok: false, error: "Too many signup attempts. Try again later." }, 429);
   const b = await request.json(), email = normalizeEmail(b.email), password = String(b.password || "");
@@ -661,49 +634,137 @@ async function adminUpdateUser(request, env) {
   return json(request, { ok: true, user: updated });
 }
 
-async function handleAI(request, env, user) {
-  const form = await request.formData(); const prompt = String(form.get("prompt") || "").trim();
-  const fv = form.get("file"), file = fv instanceof File && fv.size > 0 ? fv : null;
-  if (!prompt && !file) return json(request, { ok: false, error: "Type a message or attach a file." }, 400);
-  if (file && file.size > 12 * 1024 * 1024) return json(request, { ok: false, error: "File is too large. Use a file under 12 MB." }, 413);
-  const intent = detectIntent(prompt, file), metric = metricFor(intent, file), allowed = await checkLimit(env, user, metric);
-  if (!allowed.ok) return json(request, { ok: false, error: allowed.message, code: allowed.code, intent }, 402);
-  await storeMessage(env, user.id, "user", "text", `${file ? `📎 ${file.name}\n` : ""}${prompt || "Analyze this file"}`);
-  if (intent === "image_generate") {
-    const dataUrl = await runFlux(env, prompt);
-    await incrementUsage(env, user.id, "image", (PLAN_LIMITS[user.plan] || PLAN_LIMITS.free).image.period);
-    await storeMessage(env, user.id, "assistant", "image", "Generated image.");
-    return json(request, { ok: true, type: "image", intent, reply: "Here is your generated image.", imageDataUrl: dataUrl });
-  }
-  if (intent === "image_edit") {
-    const blob = new Blob([await file.arrayBuffer()], { type: file.type || "image/jpeg" });
-    const dataUrl = await runFlux(env, `Use input image 0 as the source image. Preserve the main subject and identity unless the user explicitly asks to change them. Apply this edit: ${prompt || "Improve this image naturally."}`, blob);
-    await incrementUsage(env, user.id, "image_edit", (PLAN_LIMITS[user.plan] || PLAN_LIMITS.free).image_edit.period);
-    await storeMessage(env, user.id, "assistant", "image", "Edited image.");
-    return json(request, { ok: true, type: "image", intent, reply: "Here is your edited image.", imageDataUrl: dataUrl });
-  }
-  if (intent === "video_t2v" || intent === "video_i2v") {
-    let videoUrl;
-    try { videoUrl = intent === "video_i2v" ? await generateImageVideo(request, env, file, prompt) : await generateTextVideo(env, prompt); }
-    catch (e) {
-      const msg = String(e?.message || "");
-      if (/billing|credit|payment|unified|permission/i.test(msg)) return json(request, { ok: false, code: "VIDEO_BILLING_REQUIRED", error: "Video generation is connected, but your Cloudflare account needs Unified Billing/prepaid AI credits before the third-party video model can run." }, 402);
-      throw e;
+async function useQuota(env, user, metric, operation) {
+  if (isAdminUser(env, user)) return operation();
+  if (metric === "video") {
+    const charge = await env.DB.prepare("UPDATE users SET video_credits=video_credits-1 WHERE id=? AND video_credits>0")
+      .bind(user.id).run();
+    if (!charge.meta.changes) throw requestError("Video generation requires video credits.", 402, "VIDEO_CREDITS_REQUIRED");
+    try {
+      return await operation();
+    } catch (error) {
+      await env.DB.prepare("UPDATE users SET video_credits=video_credits+1 WHERE id=?").bind(user.id).run();
+      throw error;
     }
-    if (!isAdminUser(env, user)) await decrementVideoCredit(env, user.id); await storeMessage(env, user.id, "assistant", "video", "Generated video.");
-    return json(request, { ok: true, type: "video", intent, reply: "Here is your generated video.", videoUrl });
   }
-  let answer;
-  if (file) {
+  const allowed = await checkLimit(env, user, metric);
+  if (!allowed.ok) throw requestError(allowed.message, 402, allowed.code);
+  const key = periodKey(allowed.spec.period);
+  const quota = await env.DB.prepare(`INSERT INTO usage_counters(user_id,period_key,metric,count) VALUES(?,?,?,1)
+    ON CONFLICT(user_id,period_key,metric) DO UPDATE SET count=count+1 WHERE count < ?`)
+    .bind(user.id, key, metric, allowed.spec.limit).run();
+  if (!quota.meta.changes) throw requestError("Usage limit reached for this tool.", 402, "LIMIT_REACHED");
+  try {
+    return await operation();
+  } catch (error) {
+    await env.DB.prepare("UPDATE usage_counters SET count=MAX(count-1,0) WHERE user_id=? AND period_key=? AND metric=?")
+      .bind(user.id, key, metric).run();
+    throw error;
+  }
+}
+
+async function transcribe(request, env, user) {
+  const form = await request.formData();
+  const audio = form.get("audio");
+  const language = form.get("language");
+  if (!(audio instanceof File) || !audio.size || audio.size > 5 * 1024 * 1024 || !/^(audio|video)\//.test(audio.type)) {
+    throw requestError("Record audio under 5 MB.");
+  }
+  const result = await useQuota(env, user, "chat", async () => {
+    const data = await env.AI.run("@cf/openai/whisper-large-v3-turbo", {
+      audio: bytesToBase64(await audio.arrayBuffer()),
+      task: "transcribe",
+      ...(language === "ar" || language === "en" ? { language } : {}),
+    });
+    if (!data?.text?.trim()) throw requestError("No speech was recognized. Try recording again.", 422);
+    return data.text.trim();
+  });
+  return json(request, { ok: true, text: result });
+}
+
+async function handleAI(request, env, user) {
+  const form = await request.formData();
+  const prompt = String(form.get("prompt") || "").trim();
+  const value = form.get("file");
+  const file = value instanceof File && value.size > 0 ? value : null;
+  const mode = form.get("mode") || "auto";
+  const projectId = String(form.get("project") || "");
+  const project = projectId ? await findProject(env.DB, user.id, projectId) : null;
+  if (!prompt && !file) throw requestError("Type a message or attach a file.");
+  if (prompt.length > 10000) throw requestError("Keep requests under 10,000 characters.");
+  if (file && file.size > 12 * 1024 * 1024) throw requestError("File is too large. Use a file under 12 MB.", 413);
+  const intent = mode === "image" ? (file ? "image_edit" : "image_generate")
+    : mode === "video" ? (file ? "video_i2v" : "video_t2v")
+    : detectIntent(prompt, file);
+  const contextualChat = project && mode === "auto" && !file && ["chat", "office", "document_control"].includes(intent);
+  if (mode === "document" || mode === "web" || contextualChat) {
+    const question = prompt || "Summarize the main points in this document.";
+    const isWeb = mode === "web";
+    if (isWeb && file) throw requestError("Remove the attachment before searching the web.");
+    const result = await useQuota(env, user, mode === "document" && file ? "file" : "chat", async () => {
+      const documents = isWeb || !project ? [] : await projectDocuments(env.DB, project.id);
+      if (file) documents.push({ name: file.name, id: "attachment", pages: await extractPdfPages(env.AI, file) });
+      if (mode === "document" && !documents.length) throw requestError("Attach a PDF or add a PDF to this project first.");
+      const sources = isWeb ? await webSources(env, question) : [];
+      if (isWeb && !sources.length) throw requestError("No sources found. Try a more specific search.", 422);
+      const recent = project && !isWeb ? await projectHistory(env.DB, project.id) : [];
+      if (!project && !isWeb) {
+        try {
+          const context = JSON.parse(String(form.get("context") || "[]").slice(0, 10000));
+          if (Array.isArray(context)) recent.push(...context.slice(-8).filter(message =>
+            ["user", "assistant"].includes(message?.role) && typeof message.content === "string"));
+        } catch {
+          // An older or malformed client context can be ignored.
+        }
+      }
+      return answerWithSources((system, text) => runText(env, system, text), question,
+        { documents, sources, instructions: isWeb ? "" : project?.instructions, history: recent });
+    });
+    if (project) {
+      const saved = result.citations.filter(ref => ref.documentId !== "attachment");
+      await saveProjectAnswer(env.DB, project.id, question, result.reply, saved);
+    } else {
+      await storeMessage(env, user.id, "user", "text", question);
+      const citations = result.citations.filter(ref => !!ref.url);
+      const saved = JSON.stringify({ reply: result.reply, citations });
+      await storeMessage(env, user.id, "assistant", citations.length && saved.length <= 24000 ? "sourced" : "text",
+        citations.length && saved.length <= 24000 ? saved : result.reply);
+    }
+    return json(request, { ok: true, type: "text", ...result });
+  }
+  const metric = metricFor(intent, file);
+  const userMessage = `${file ? "📎 " + file.name + "\n" : ""}${prompt || "Analyze this file"}`;
+  if (["image", "image_edit", "video"].includes(metric)) {
+    if (file && !["image/jpeg", "image/png", "image/webp"].includes(file.type)) throw requestError("Choose a JPG, PNG or WebP reference image.");
+    const options = { prompt, file, format: form.get("format"), style: form.get("style") };
+    const video = metric === "video";
+    const url = await useQuota(env, user, metric, () => video ? generateVideo(env, options) : generateImage(env, options));
+    const reply = video ? "Your video is ready." : "Your image is ready.";
+    if (project) await saveProjectAnswer(env.DB, project.id, userMessage, reply, []);
+    else {
+      await storeMessage(env, user.id, "user", "text", userMessage);
+      await storeMessage(env, user.id, "assistant", video ? "video" : "image", reply);
+    }
+    return json(request, { ok: true, type: video ? "video" : "image", intent, reply, ...(video ? { videoUrl: url } : { imageDataUrl: url }) });
+  }
+  const answer = await useQuota(env, user, metric, async () => {
+    if (!file) return runText(env, systemFor(intent), prompt);
     const content = await convertFile(env, file);
-    answer = await runText(env, systemFor(intent === "file_analysis" ? "file_analysis" : intent), `User request:\n${prompt || "Analyze this file and summarize the important information."}\n\nUploaded file: ${file.name}\n\nFile content:\n${content}`);
-  } else answer = await runText(env, systemFor(intent), prompt);
-  const activePlan = PLAN_LIMITS[user.plan] || PLAN_LIMITS.free, metricSpec = activePlan[metric] || activePlan.chat;
-  await incrementUsage(env, user.id, metric, metricSpec.period); await storeMessage(env, user.id, "assistant", "text", answer);
+    return runText(env, systemFor(intent), `User request:\n${prompt || "Analyze this file and summarize the important information."}\n\nUploaded file: ${file.name}\n\nFile content:\n${content}`);
+  });
+  if (!project) await storeMessage(env, user.id, "user", "text", userMessage);
+  if (project) await saveProjectAnswer(env.DB, project.id, userMessage, answer, []);
+  else await storeMessage(env, user.id, "assistant", "text", answer);
   return json(request, { ok: true, type: "text", intent, reply: answer, artifact: artifactFor(intent) });
 }
 
 export default {
+  async scheduled(event, env) {
+    if (!env.NOTION_API_TOKEN) return;
+    await ensureSchema(env);
+    await notionDigest(env, event.scheduledTime);
+  },
+
   async fetch(request, env) {
     if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(request) });
     const url = new URL(request.url), path = url.pathname.replace(/\/+$/, "") || "/";
@@ -725,7 +786,7 @@ export default {
         return json(request, { ok: coreOk, version: "6.0", checks, payment_mode: String(env.MYFATOORAH_MODE || "test") }, coreOk ? 200 : 500);
       }
       if (request.method === "GET" && path === "/api/config") {
-        return json(request, { ok: true, version: "6.0", google_enabled: !!env.GOOGLE_CLIENT_ID, google_client_id: env.GOOGLE_CLIENT_ID || "", payments_enabled: !!env.MYFATOORAH_API_KEY, payment_provider: "MyFatoorah", payment_mode: String(env.MYFATOORAH_MODE || "test"), plans: Object.entries(PLAN_PRICES).map(([id,p]) => ({ id, label: planLabel(id), kwd: p.kwd, usd: p.usd })) });
+        return json(request, { ok: true, version: "6.0", google_enabled: !!env.GOOGLE_CLIENT_ID, google_client_id: env.GOOGLE_CLIENT_ID || "", payments_enabled: !!env.MYFATOORAH_API_KEY, web_search_enabled: !!env.BRAVE_SEARCH_API_KEY, payment_provider: "MyFatoorah", payment_mode: String(env.MYFATOORAH_MODE || "test"), plans: Object.entries(PLAN_PRICES).map(([id,p]) => ({ id, label: planLabel(id), kwd: p.kwd, usd: p.usd })) });
       }
       if (request.method === "GET" && path === "/") return json(request, { ok: true, name: "NibrasGPT", version: "6.0", features: ["email-auth","google-auth","admin-dashboard","user-controls","myfatoorah-payments","auto-plan-activation","server-usage","chat","image","documents","website","app","code","cad","text-video","image-video","pwa"] });
 
@@ -736,6 +797,24 @@ export default {
 
       if (request.method === "POST" && path === "/api/logout") { await deleteSession(request, env); return json(request, { ok: true }); }
 
+      const send = (body, status = 200) => json(request, body, status);
+      if (path === "/api/projects" || path.startsWith("/api/projects/")) {
+        const auth = await requireUser(request, env);
+        if (auth.error) return auth.error;
+        return await projectRoute(request, env, auth.user.id, path, send, operation => useQuota(env, auth.user, "file", operation));
+      }
+      if (request.method === "POST" && path === "/api/voice/transcribe") {
+        const auth = await requireUser(request, env);
+        if (auth.error) return auth.error;
+        return await transcribe(request, env, auth.user);
+      }
+      if (path === "/api/notion/digest" && ["GET", "POST"].includes(request.method)) {
+        const auth = await requireAdmin(request, env);
+        if (auth.error) return auth.error;
+        return send({ ok: true, configured: !!env.NOTION_API_TOKEN,
+          digest: request.method === "POST" ? await notionDigest(env) : await latestDigest(env) });
+      }
+
       if (request.method === "GET" && path === "/api/me") {
         const a = await requireUser(request, env); if (a.error) return a.error;
         return json(request, { ok: true, user: a.user, plan_label: a.user.is_admin ? "Owner Unlimited" : planLabel(a.user.plan), usage: await usageSummary(env, a.user) });
@@ -743,7 +822,12 @@ export default {
       if (request.method === "GET" && path === "/api/history") {
         const a = await requireUser(request, env); if (a.error) return a.error;
         const r = await env.DB.prepare("SELECT role,kind,content,created_at FROM chat_messages WHERE user_id=? ORDER BY id DESC LIMIT 40").bind(a.user.id).all();
-        return json(request, { ok: true, messages: (r.results || []).reverse() });
+        const messages = (r.results || []).reverse().map(message => {
+          if (message.kind !== "sourced") return message;
+          const saved = JSON.parse(message.content);
+          return { ...message, kind: "text", content: saved.reply, citations: saved.citations };
+        });
+        return json(request, { ok: true, messages });
       }
       if (request.method === "POST" && path === "/api/history/clear") {
         const a = await requireUser(request, env); if (a.error) return a.error;
@@ -766,6 +850,9 @@ export default {
         if (a.user.is_admin) return json(request, { ok: false, error: "Owner account cannot be deleted here." }, 400);
         await audit(env, a.user.id, "account.delete", a.user.id);
         await env.DB.batch([
+          env.DB.prepare("DELETE FROM project_documents WHERE project_id IN (SELECT id FROM projects WHERE user_id=?)").bind(a.user.id),
+          env.DB.prepare("DELETE FROM project_messages WHERE project_id IN (SELECT id FROM projects WHERE user_id=?)").bind(a.user.id),
+          env.DB.prepare("DELETE FROM projects WHERE user_id=?").bind(a.user.id),
           env.DB.prepare("DELETE FROM chat_messages WHERE user_id=?").bind(a.user.id),
           env.DB.prepare("DELETE FROM usage_counters WHERE user_id=?").bind(a.user.id),
           env.DB.prepare("DELETE FROM sessions WHERE user_id=?").bind(a.user.id),
@@ -791,7 +878,9 @@ export default {
       }
       return json(request, { ok: false, error: "Endpoint not found." }, 404);
     } catch (e) {
-      return json(request, { ok: false, error: e?.message || "Unexpected server error." }, 500);
+      if (e?.status >= 400 && e.status < 600) return json(request, { ok: false, error: e.message, code: e.code }, e.status);
+      console.error("Worker request failed", e);
+      return json(request, { ok: false, error: "Unexpected server error. Please try again." }, 500);
     }
   },
 };

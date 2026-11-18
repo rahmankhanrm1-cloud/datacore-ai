@@ -1,9 +1,26 @@
-const CACHE="nibrasgpt-v1-shell-1";
-const SHELL=["./","./index.html","./manifest.webmanifest","./icon-192.webp","./icon-512.webp"];
-self.addEventListener("install",event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting()))});
-self.addEventListener("activate",event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
-self.addEventListener("fetch",event=>{
-  const u=new URL(event.request.url);
-  if(event.request.method!=="GET"||u.hostname.includes("workers.dev")||u.pathname.includes("/api/")) return;
-  event.respondWith(fetch(event.request).then(r=>{const copy=r.clone();caches.open(CACHE).then(c=>c.put(event.request,copy));return r}).catch(()=>caches.match(event.request).then(r=>r||caches.match("./index.html"))));
+const CACHE = "nibrasgpt-shell-2";
+const SHELL = ["./", "./index.html", "./workspace.css", "./workspace-ui.js", "./manifest.webmanifest", "./icon-192.webp", "./icon-512.webp"];
+
+self.addEventListener("install", event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+});
+
+self.addEventListener("activate", event => {
+  event.waitUntil(caches.keys().then(keys => Promise.all(
+    keys.filter(key => key.startsWith("nibrasgpt-") && key !== CACHE).map(key => caches.delete(key)),
+  )).then(() => self.clients.claim()));
+});
+
+self.addEventListener("fetch", event => {
+  const url = new URL(event.request.url);
+  const isShell = SHELL.some(path => new URL(path, self.registration.scope).pathname === url.pathname);
+  if (event.request.method !== "GET" || url.origin !== self.location.origin || !isShell) return;
+  event.respondWith(fetch(event.request).then(async response => {
+    if (response.ok) {
+      const cache = await caches.open(CACHE);
+      await cache.put(event.request, response.clone());
+    }
+    return response;
+  }).catch(async () => (await caches.match(event.request)) ||
+    (event.request.mode === "navigate" ? await caches.match("./index.html") : Response.error())));
 });

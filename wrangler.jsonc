@@ -9,6 +9,7 @@
     "OWNER_EMAIL": "datacore.solutionswork@gmail.com",
     "GOOGLE_CLIENT_ID": "1021980839676-1ors7bt5kd27il5cs7c9q56725ikd91t.apps.googleusercontent.com"
   },
+  "triggers": { "crons": ["0 7 * * MON"] },
   "ai": {
     "binding": "AI"
   },

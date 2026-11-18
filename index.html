@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#050816">
+<meta name="theme-color" content="#f4f5f0">
 <title>NibrasGPT</title>
 <meta name="description" content="NibrasGPT — one chat for AI, images, documents, CVs, Excel, websites, apps, code, engineering CAD and video.">
 <link rel="manifest" href="./manifest.webmanifest">
@@ -18,36 +18,49 @@
 @media(max-width:880px){.plans{grid-template-columns:1fr 1fr}.adminlayout{grid-template-columns:1fr}.summarygrid{grid-template-columns:1fr 1fr}.wrap{max-width:91%}}
 @media(max-width:560px){.plans,.usagegrid,.summarygrid{grid-template-columns:1fr}.planpill{display:none}.adminpill{display:none!important}.main{padding-left:12px;padding-right:12px}.welcome{margin-top:4vh}.modalcard{padding:15px}}
 </style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap">
+<link rel="stylesheet" href="./workspace.css">
 </head>
 <body>
-<div class="fx"><div class="orb o1"></div><div class="orb o2"></div></div>
+
 <div class="shell">
 <header class="header">
-  <div class="brand"><img class="logo" src="./icon-192.webp" alt="NibrasGPT logo"><div><h1>NibrasGPT</h1><p>Your Intelligent AI Companion</p></div></div>
-  <div class="headright"><div class="adminpill" id="adminPill">Owner</div><div class="planpill" id="planPill">Sign in</div><button class="iconbtn" id="menuBtn">☰</button></div>
+  <div class="brand"><img class="logo" src="./icon-192.webp" alt="NibrasGPT logo"><div><h1>NibrasGPT</h1></div></div>
+  <div class="headright">
+  <div class="workspace-bar"><span class="workspace-title" id="workspaceTitle">General chat</span>
+  <button class="secondary" id="projectsBtn">Projects</button>
+  <button class="secondary" id="digestBtn" hidden>Notion digest</button></div>
+  <button class="secondary" id="signInBtn">Sign in</button><div class="adminpill" id="adminPill">Owner</div><div class="planpill" id="planPill">Sign in</div><button class="iconbtn" id="menuBtn" aria-label="Open menu">☰</button></div>
 </header>
 <main class="main">
   <section class="welcome" id="welcome">
-    <span class="pill">⚡ NibrasGPT • Ask • Learn • Grow</span>
-    <h2>Ask, create, build <span class="grad">anything</span></h2>
-    <p>AI chat, CVs, job help, documents, images, videos, websites, apps, code and engineering CAD — in one place.</p>
-    <div class="chips">
-      <button class="chip" data-prompt="Create a cinematic drone image of a tropical beach at sunset">🎨 Image</button>
-      <button class="chip" data-prompt="Create a 5 second cinematic video of a futuristic city at night">🎬 Video</button>
-      <button class="chip" data-prompt="Build a complete responsive business website in one HTML file">🌐 Website</button>
-      <button class="chip" data-prompt="Build an Android app and give me the full source structure">📱 App</button>
-      <button class="chip" data-prompt="Write clean production-ready code for my requirement">💻 Code</button>
-      <button class="chip" data-prompt="Create an AutoCAD 3D conceptual piping layout for an oil and gas facility. Ask for required dimensions and equipment first.">📐 Engineering CAD</button>
-      <button class="chip" data-prompt="Create an ATS-friendly CV using the details I provide">📄 CV</button>
-      <button class="chip" data-prompt="Create a professional master document register">🗂️ Documents</button>
+    <h2>What are you<br><em>working on?</em></h2>
+    <p>Ask about your documents, look up current information, or create an image or video.</p>
+    <div class="tool-grid">
+      <button class="tool-tile" data-mode="document"><span aria-hidden="true">▤</span><strong>Ask a PDF</strong></button>
+      <button class="tool-tile" data-mode="web"><span aria-hidden="true">⌕</span><strong>Search the web</strong></button>
+      <button class="tool-tile" data-mode="image"><span aria-hidden="true">◇</span><strong>Create an image</strong></button>
+      <button class="tool-tile" data-mode="video"><span aria-hidden="true">▷</span><strong>Create a video</strong></button>
     </div>
   </section>
-  <section class="messages" id="messages"></section>
+  <section class="messages" id="messages" aria-label="Conversation" aria-live="polite"></section>
 </main>
 </div>
 <div class="composerbox"><div class="composerWrap">
   <div class="attachment" id="attachment"><img class="thumb" id="thumb" alt=""><div class="fileicon" id="fileIcon">📎</div><div class="attxt"><strong id="fileName"></strong><span id="fileMeta"></span></div><button class="remove" id="removeFile">×</button></div>
-  <div class="composer"><button class="attach" id="attachBtn">📎</button><textarea id="input" rows="1" placeholder="Ask anything, attach an image/document, or describe what you want to create…"></textarea><button class="send" id="sendBtn">➤</button></div>
+  <div class="composer-tools">
+    <select id="toolMode" aria-label="Chat tool">
+      <option value="auto">Ask</option><option value="document">PDF Q&amp;A</option>
+      <option value="web">Web search</option><option value="image">Image</option><option value="video">Video</option>
+    </select>
+    <div id="mediaControls" class="media-controls" hidden>
+      <select id="mediaFormat" aria-label="Media format"><option value="square">Square</option><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select>
+      <select id="mediaStyle" aria-label="Media style"><option value="realistic">Realistic</option><option value="creative">Follow prompt style</option></select>
+    </div>
+    <select id="voiceLanguage" aria-label="Dictation language"><option value="">Voice · Auto</option><option value="ar">العربية</option><option value="en">English</option></select>
+  </div>
+  <div class="composer"><button class="attach" id="attachBtn" aria-label="Attach file">＋</button><textarea id="input" rows="1" aria-label="Message" dir="auto" placeholder="Ask or create…"></textarea><button class="mic" id="voiceBtn" aria-label="Toggle voice recording" aria-pressed="false">Mic</button><button class="send" id="sendBtn">Send</button></div>
+  <div class="hint" id="composerStatus" role="status"></div>
   <div class="hint">AI can make mistakes. Engineering output must be reviewed by a qualified engineer before field use.</div>
   <input type="file" id="fileInput" hidden accept="image/*,.pdf,.docx,.xlsx,.xls,.xlsm,.xlsb,.csv,.ods,.odt,.numbers,.html,.htm,.xml,.txt,.md,.json,.js,.ts,.css,.py,.java,.kt,.dart,.sql,.scr,.lsp,.scad,.dxf">
 </div></div>
@@ -57,6 +70,7 @@
   <h3>NibrasGPT</h3>
   <div class="profile"><img id="profileImg" alt=""><div><div id="userLine">Not signed in</div><div class="small" id="authLine"></div></div></div>
   <button class="menuitem" id="newChat">＋ New chat</button>
+  <button class="menuitem" id="digestMenuBtn" hidden>Weekly Notion digest</button>
   <button class="menuitem" id="usageBtn">📊 My usage</button>
   <button class="menuitem" id="plansBtn">💳 Plans & pricing</button>
   <button class="menuitem" id="billingBtn">🧾 Billing & subscription</button>
@@ -64,12 +78,11 @@
   <button class="menuitem" id="accountBtn">👤 My account</button>
   <button class="menuitem" id="privacyBtn">🔒 Privacy</button>
   <button class="menuitem" id="termsBtn">📜 Terms</button>
-  <button class="menuitem" id="fxBtn">✨ Pause animations</button>
   <button class="menuitem" id="logoutBtn">↪ Logout</button>
 </aside></div>
 
 <div class="modal" id="authModal"><div class="modalcard" style="max-width:470px">
-  <div class="modalhead"><div><h2 style="margin:0">Welcome to NibrasGPT</h2><div class="small">Continue with Google or use email and password.</div></div></div>
+  <div class="modalhead"><div><h2 style="margin:0">Sign in to NibrasGPT</h2><div class="small">Continue with Google or use email and password.</div></div><button class="iconbtn" id="authClose" aria-label="Close sign-in">×</button></div>
   <div class="googlewrap" id="googleBtnWrap"><div class="small">Loading Google sign-in…</div></div>
   <div class="divider">or</div>
   <div class="tabs"><button class="secondary tab active" id="loginTab">Sign in</button><button class="secondary tab" id="signupTab">Create account</button></div>
@@ -107,6 +120,29 @@
 <div class="modal" id="privacyModal"><div class="modalcard" style="max-width:760px"><div class="modalhead"><h2 style="margin:0">Privacy Policy</h2><button class="iconbtn closeModal">×</button></div><div class="legal"><p>NibrasGPT stores account information needed to provide the service, including your email address, plan, usage counters, and chat history. Google sign-in may also provide your name and profile image.</p><p>Uploaded documents and images are processed to answer your request. Temporary files used for certain video operations are deleted after processing. Payment card details are handled on the payment provider's hosted checkout and are not stored by NibrasGPT.</p><p>Payment records may include invoice IDs, payment IDs, status, plan, amount and subscription dates. You can clear chat history from My Account and can delete a non-owner account from the service.</p><h3>AI and engineering content</h3><p>AI output can be incorrect. Engineering and CAD output is conceptual assistance and must be checked and approved by a qualified engineer before field use.</p></div></div></div>
 <div class="modal" id="termsModal"><div class="modalcard" style="max-width:760px"><div class="modalhead"><h2 style="margin:0">Terms of Use</h2><button class="iconbtn closeModal">×</button></div><div class="legal"><p>Use NibrasGPT lawfully and do not use the service to abuse, attack, or violate the rights of others. Usage is subject to the limits shown for your plan.</p><p>Paid plans are activated only after payment is verified by the server. A monthly subscription period is approximately 30 days in this implementation. Refunds, cancellations and commercial terms should be published before a full public commercial launch.</p><p>AI outputs are generated automatically and may contain errors. You remain responsible for reviewing outputs before relying on them, especially for legal, medical, financial, safety-critical, engineering or field work.</p></div></div></div>
 
+<div class="modal" id="projectsModal" role="dialog" aria-modal="true" aria-labelledby="projectsHeading"><div class="modalcard workspace-modal">
+  <div class="modalhead"><h2 id="projectsHeading">Projects</h2><button class="iconbtn closeModal" aria-label="Close projects">×</button></div>
+  <div class="project-actions"><button id="generalChat" class="mini">General chat</button><div class="project-actions" id="projectList"></div></div>
+  <form id="projectForm" class="workspace-form">
+    <label>Project name<input id="projectName" maxlength="100" required></label>
+    <label>Project instructions <span class="small">Optional</span><textarea id="projectInstructions" maxlength="2000" rows="2"></textarea></label>
+    <button class="primary" id="createProject">Create project</button>
+  </form>
+  <section id="projectDetails" hidden>
+    <h3 id="activeProjectName"></h3><label>Add a PDF <span class="small">Up to 20 pages and 8 MB each</span><input id="projectFile" type="file" accept=".pdf,application/pdf"></label>
+    <ul class="workspace-list" id="documentList"></ul><button class="secondary" id="deleteProject">Delete project</button>
+  </section>
+  <p class="small" id="projectStatus" role="status"></p>
+</div></div>
+<div class="modal" id="digestModal" role="dialog" aria-modal="true" aria-labelledby="digestHeading"><div class="modalcard workspace-modal">
+  <div class="modalhead"><h2 id="digestHeading">Weekly Notion digest</h2><button class="iconbtn closeModal" aria-label="Close Notion digest">×</button></div>
+  <p class="small" id="digestStatus" role="status"></p><button class="secondary" id="digestRefresh">Run now</button><ul class="workspace-list" id="digestList"></ul>
+</div></div>
+<div class="modal" id="sourceModal" role="dialog" aria-modal="true" aria-labelledby="sourceTitle"><div class="modalcard workspace-modal">
+  <div class="modalhead"><h2 id="sourceTitle">PDF source</h2><button class="iconbtn closeModal" aria-label="Close source">×</button></div><p id="sourceText"></p>
+</div></div>
+
+<script src="./workspace-ui.js"></script>
 <script>
 const BASE="https://datacore-ai-api.datacore-solutionswork.workers.dev";
 let token=localStorage.getItem("datacore_v6_token")||localStorage.getItem("datacore_v5_token")||"",user=null,attachedFile=null,history=[],config=null,authMode="login",deferredInstall=null,adminData=null;
@@ -117,23 +153,170 @@ function fmtDate(ms){if(!ms)return "—";try{return new Date(Number(ms)).toLocal
 function md(t){let x=esc(t||""),blocks=[];x=x.replace(/```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g,(_,lang,c)=>{let k="@@C"+blocks.length+"@@";blocks.push(`<pre data-lang="${lang}"><code>${c.trim()}</code></pre>`);return k});let out="",ul=false,ol=false;const close=()=>{if(ul){out+="</ul>";ul=false}if(ol){out+="</ol>";ol=false}};for(let raw of x.split(/\r?\n/)){let l=raw.trimEnd();if(/^@@C\d+@@$/.test(l.trim())){close();out+=l.trim();continue}if(!l.trim()){close();continue}l=l.replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/`([^`]+)`/g,"<code>$1</code>");if(/^###\s+/.test(l)){close();out+="<h3>"+l.replace(/^###\s+/,"")+"</h3>"}else if(/^##\s+/.test(l)){close();out+="<h2>"+l.replace(/^##\s+/,"")+"</h2>"}else if(/^#\s+/.test(l)){close();out+="<h1>"+l.replace(/^#\s+/,"")+"</h1>"}else if(/^[-*]\s+/.test(l)){if(ol){out+="</ol>";ol=false}if(!ul){out+="<ul>";ul=true}out+="<li>"+l.replace(/^[-*]\s+/,"")+"</li>"}else if(/^\d+\.\s+/.test(l)){if(ul){out+="</ul>";ul=false}if(!ol){out+="<ol>";ol=true}out+="<li>"+l.replace(/^\d+\.\s+/,"")+"</li>"}else{close();out+="<p>"+l+"</p>"}}close();blocks.forEach((b,i)=>out=out.replace("@@C"+i+"@@",b));return out}
 function btn(label,fn){let b=document.createElement("button");b.className="mini";b.textContent=label;b.onclick=fn;return b}
 function render(){messages.innerHTML="";welcome.style.display=history.length?"none":"block";history.forEach(renderMessage)}
-function renderMessage(m){let row=document.createElement("div");row.className="msg "+m.role;if(m.role==="assistant"){let a=document.createElement("div");a.className="avatar";a.textContent="AI";row.appendChild(a)}let w=document.createElement("div");w.className="wrap";if(m.kind==="image"&&m.url){let c=document.createElement("div");c.className="bubble imagecard";c.innerHTML=`<p>${esc(m.content||"Image result")}</p><img src="${m.url}">`;w.appendChild(c);let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Download",()=>downloadUrl(m.url,"datacore-ai-image.jpg")));ac.appendChild(btn("Edit this image",()=>attachGeneratedImage(m.url)));w.appendChild(ac)}else if(m.kind==="video"&&m.url){let c=document.createElement("div");c.className="bubble videocard";c.innerHTML=`<p>${esc(m.content||"Video result")}</p><video controls playsinline src="${m.url}"></video>`;w.appendChild(c);let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Open video",()=>window.open(m.url,"_blank")));w.appendChild(ac)}else{let b=document.createElement("div");b.className="bubble";b.innerHTML=m.role==="assistant"?md(m.content):esc(m.content).replace(/\n/g,"<br>");w.appendChild(b);if(m.role==="assistant"&&m.content!=="Working…"){let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Copy",()=>navigator.clipboard.writeText(m.content||"")));ac.appendChild(btn("Download",()=>downloadText(m.content||"",m.artifact?.name||"datacore-ai-result.txt")));if(m.artifact?.kind==="website")ac.appendChild(btn("Save HTML",()=>saveCode(m.content,"index.html","html")));if(m.artifact?.kind==="cad")ac.appendChild(btn("Save CAD Script",()=>saveCode(m.content,"datacore-engineering.scr","scr")));w.appendChild(ac)}}row.appendChild(w);messages.appendChild(row)}
+function renderMessage(message) {
+  const row = document.createElement("div");
+  row.className = "msg " + (message.role === "assistant" ? "assistant" : "user");
+  const assistant = message.role === "assistant";
+  if (assistant) {
+    const avatar = document.createElement("div");
+    avatar.className = "avatar";
+    avatar.textContent = "N";
+    avatar.setAttribute("aria-hidden", "true");
+    row.append(avatar);
+  }
+  const wrap = document.createElement("div");
+  wrap.className = "wrap";
+  const bubble = document.createElement("div");
+  bubble.className = "bubble";
+  bubble.dir = "auto";
+  if (assistant) bubble.innerHTML = md(message.content);
+  else bubble.textContent = message.content;
+  wrap.append(bubble);
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  const safeImage = message.kind === "image" && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(message.url || "");
+  const safeVideo = message.kind === "video" && validWebUrl(message.url);
+  if (safeImage || safeVideo) {
+    const media = document.createElement(safeImage ? "img" : "video");
+    bubble.classList.add(safeImage ? "imagecard" : "videocard");
+    if (safeImage) {
+      media.alt = "Generated image";
+      media.loading = "lazy";
+      const extension = message.url.match(/^data:image\/(jpeg|png|webp);/)[1];
+      actions.append(btn("Download image", () => downloadUrl(message.url, "nibrasgpt-image." + extension)));
+      actions.append(btn("Edit image", () => attachGeneratedImage(message.url)));
+    } else {
+      media.controls = true;
+      media.playsInline = true;
+      media.preload = "metadata";
+      actions.append(btn("Open video", () => window.open(safeVideo, "_blank", "noopener,noreferrer")));
+    }
+    media.src = safeImage ? message.url : safeVideo;
+    bubble.append(media);
+  } else if (assistant && !message.pending) {
+    actions.append(btn("Copy", () => navigator.clipboard.writeText(message.content || "")));
+    actions.append(btn("Download", () => downloadText(message.content || "", message.artifact?.name || "nibrasgpt-result.txt")));
+    if (message.artifact?.kind === "website") actions.append(btn("Save HTML", () => saveCode(message.content, "index.html", "html")));
+    if (message.artifact?.kind === "cad") actions.append(btn("Save CAD script", () => saveCode(message.content, "nibrasgpt-engineering.scr", "scr")));
+    if ("speechSynthesis" in window) actions.append(btn("Listen", () => {
+      speechSynthesis.cancel();
+      const speech = new SpeechSynthesisUtterance(message.content);
+      const arabic = /[\u0600-\u06ff]/.test(message.content);
+      speech.lang = arabic ? "ar" : "en";
+      speechSynthesis.speak(speech);
+    }));
+  }
+  renderCitations(message, wrap);
+  if (actions.children.length) wrap.append(actions);
+  row.append(wrap);
+  messages.append(row);
+}
+
 function downloadText(t,name){let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"text/plain"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}function downloadUrl(url,name){let a=document.createElement("a");a.href=url;a.download=name;a.click()}function saveCode(text,name,lang){let rx=new RegExp("```"+lang+"\\s*([\\s\\S]*?)```","i"),m=text.match(rx);if(!m)m=text.match(/```[a-zA-Z0-9_-]*\s*([\s\S]*?)```/);if(!m){alert("No code block found.");return}let a=document.createElement("a");a.href=URL.createObjectURL(new Blob([m[1]],{type:name.endsWith(".html")?"text/html":"text/plain"}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)}
 function autoGrow(){input.style.height="auto";input.style.height=Math.min(input.scrollHeight,155)+"px"}function showModal(id){document.getElementById(id).classList.add("show")}function hideModal(id){document.getElementById(id).classList.remove("show")}function closeDrawer(){document.getElementById("drawer").classList.remove("open")}
-function setUserUI(){const label=user?(user.owner_unlimited===true?"Owner Unlimited":({free:"Free",ai_pro:"AI Pro",builder:"Builder Pro",engineering:"Engineering Pro"}[user.plan]||user.plan)):"Sign in";document.getElementById("planPill").textContent=label;document.getElementById("userLine").textContent=user?user.email:"Not signed in";document.getElementById("authLine").textContent=user?(user.owner_unlimited===true?`Unlimited • No expiry • ${user.auth_provider||"email"}`:`${label} • ${user.auth_provider||"email"} • Video credits: ${user.video_credits}`):"";document.getElementById("adminBtn").style.display=user?.is_admin?"block":"none";document.getElementById("adminPill").style.display=user?.is_admin?"block":"none";const img=document.getElementById("profileImg");if(user?.picture_url){img.src=user.picture_url;img.style.display="block"}else img.style.display="none"}
+function setUserUI(){el("digestBtn").hidden=!user?.is_admin;el("digestMenuBtn").hidden=!user?.is_admin;el("signInBtn").textContent=user?"Account":"Sign in";const label=user?(user.owner_unlimited===true?"Owner Unlimited":({free:"Free",ai_pro:"AI Pro",builder:"Builder Pro",engineering:"Engineering Pro"}[user.plan]||user.plan)):"Sign in";document.getElementById("planPill").textContent=label;document.getElementById("userLine").textContent=user?user.email:"Not signed in";document.getElementById("authLine").textContent=user?(user.owner_unlimited===true?`Unlimited • No expiry • ${user.auth_provider||"email"}`:`${label} • ${user.auth_provider||"email"} • Video credits: ${user.video_credits}`):"";document.getElementById("adminBtn").style.display=user?.is_admin?"block":"none";document.getElementById("adminPill").style.display=user?.is_admin?"block":"none";const img=document.getElementById("profileImg");if(user?.picture_url){img.src=user.picture_url;img.style.display="block"}else img.style.display="none"}
 async function api(path,opts={}){const r=await fetch(BASE+path,opts);let d;try{d=await r.json()}catch{throw new Error("Invalid server response.")}if(!r.ok||!d.ok)throw Object.assign(new Error(d.error||"Request failed."),{code:d.code,status:r.status,data:d});return d}
 async function loadConfig(){try{config=await api("/api/config");document.getElementById("paymentProviderLine").textContent=config.payments_enabled?`${config.payment_provider} checkout • ${config.payment_mode.toUpperCase()} mode`:"Payment gateway not configured yet";setupGoogle()}catch(e){config={google_enabled:false,payments_enabled:false};document.getElementById("paymentProviderLine").textContent="Could not load payment configuration"}}
 function setupGoogle(){const wrap=document.getElementById("googleBtnWrap");if(!config?.google_enabled){wrap.innerHTML='<div class="small">Google sign-in will appear after GOOGLE_CLIENT_ID is configured.</div>';return}const tryInit=()=>{if(!window.google?.accounts?.id){setTimeout(tryInit,300);return}wrap.innerHTML="";google.accounts.id.initialize({client_id:config.google_client_id,callback:handleGoogleCredential,auto_select:false,cancel_on_tap_outside:true});google.accounts.id.renderButton(wrap,{theme:"filled_black",size:"large",shape:"pill",text:"continue_with",width:320})};tryInit()}
 async function handleGoogleCredential(resp){const err=document.getElementById("authError");err.textContent="";try{let d=await api("/api/auth/google",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({credential:resp.credential})});acceptAuth(d)}catch(e){err.textContent=e.message}}
 function acceptAuth(d){token=d.token;localStorage.setItem("datacore_v6_token",token);localStorage.removeItem("datacore_v5_token");user=d.user;hideModal("authModal");setUserUI();loadHistory();handlePaymentReturn()}
-async function me(){if(!token){user=null;setUserUI();showModal("authModal");return}try{let d=await api("/api/me",{headers:headers()});user=d.user;localStorage.setItem("datacore_v6_token",token);setUserUI();await loadHistory();await handlePaymentReturn()}catch{token="";localStorage.removeItem("datacore_v6_token");localStorage.removeItem("datacore_v5_token");user=null;setUserUI();showModal("authModal")}}
-async function loadHistory(){try{let d=await api("/api/history",{headers:headers()});history=(d.messages||[]).map(x=>({role:x.role,kind:x.kind||"text",content:x.content}));render()}catch{}}
+async function me(){if(!token){user=null;setUserUI();return}try{let d=await api("/api/me",{headers:headers()});user=d.user;localStorage.setItem("datacore_v6_token",token);setUserUI();await loadHistory();await handlePaymentReturn()}catch{token="";localStorage.removeItem("datacore_v6_token");localStorage.removeItem("datacore_v5_token");user=null;setUserUI();showModal("authModal")}}
+async function loadHistory(){try{let d=await api("/api/history",{headers:headers()});history=(d.messages||[]).map(x=>({role:x.role,kind:x.kind||"text",content:x.content,citations:x.citations}));render()}catch{}}
 async function doAuth(){let email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value,err=document.getElementById("authError");err.textContent="";try{let d=await api(authMode==="signup"?"/api/signup":"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});acceptAuth(d)}catch(e){err.textContent=e.message}}
-function clearAttachment(){attachedFile=null;fileInput.value="";document.getElementById("attachment").classList.remove("show");document.getElementById("thumb").src="";document.getElementById("thumb").style.display="none";document.getElementById("fileIcon").style.display="grid"}
+function clearAttachment(){const src=el("thumb").getAttribute("src");if(src?.startsWith("blob:"))URL.revokeObjectURL(src);attachedFile=null;fileInput.value="";document.getElementById("attachment").classList.remove("show");document.getElementById("thumb").src="";document.getElementById("thumb").style.display="none";document.getElementById("fileIcon").style.display="grid"}
 function showAttachment(file,url=null){attachedFile=file;document.getElementById("attachment").classList.add("show");document.getElementById("fileName").textContent=file.name;document.getElementById("fileMeta").textContent=Math.round(file.size/1024)+" KB";if(file.type.startsWith("image/")&&url){document.getElementById("thumb").src=url;document.getElementById("thumb").style.display="block";document.getElementById("fileIcon").style.display="none"}}
 function resizeImage(file,max=1200){return new Promise((resolve,reject)=>{let fr=new FileReader();fr.onload=()=>{let im=new Image();im.onload=()=>{let s=Math.min(1,max/Math.max(im.width,im.height)),w=Math.max(1,Math.round(im.width*s)),h=Math.max(1,Math.round(im.height*s)),c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0,w,h);c.toBlob(b=>b?resolve(new File([b],"uploaded-image.jpg",{type:"image/jpeg"})):reject(new Error("Could not prepare image.")),"image/jpeg",.9)};im.onerror=()=>reject(new Error("Please use JPG, PNG or WebP."));im.src=fr.result};fr.onerror=()=>reject(new Error("Could not read image."));fr.readAsDataURL(file)})}
-async function pickFile(file){try{if(file.type.startsWith("image/")){let f=await resizeImage(file);showAttachment(f,URL.createObjectURL(f))}else showAttachment(file)}catch(e){alert(e.message)}}async function attachGeneratedImage(url){let blob=await(await fetch(url)).blob();let f=new File([blob],"generated-image.jpg",{type:"image/jpeg"});showAttachment(f,url);input.value="Edit this image: ";input.focus();autoGrow()}
-async function send(){if(!user){showModal("authModal");return}let prompt=input.value.trim(),file=attachedFile;if(!prompt&&!file)return;history.push({role:"user",kind:"text",content:(file?`📎 ${file.name}\n`:"")+(prompt||"Analyze this file")},{role:"assistant",kind:"text",content:"Working…"});render();let idx=history.length-1;input.value="";autoGrow();document.getElementById("sendBtn").disabled=true;try{let fd=new FormData();fd.append("prompt",prompt);if(file)fd.append("file",file,file.name);let d=await api("/api/ai",{method:"POST",headers:headers(),body:fd});if(d.type==="image")history[idx]={role:"assistant",kind:"image",content:d.reply,url:d.imageDataUrl};else if(d.type==="video")history[idx]={role:"assistant",kind:"video",content:d.reply,url:d.videoUrl};else history[idx]={role:"assistant",kind:"text",content:d.reply,artifact:d.artifact||null};clearAttachment();await refreshMeOnly()}catch(e){history[idx]={role:"assistant",kind:"text",content:"Error: "+e.message};if(["UPGRADE_REQUIRED","LIMIT_REACHED","VIDEO_CREDITS_REQUIRED","VIDEO_BILLING_REQUIRED"].includes(e.code))showModal("plansModal")}render();document.getElementById("sendBtn").disabled=false;window.scrollTo({top:document.body.scrollHeight,behavior:"smooth"})}
+async function pickFile(file){try{clearAttachment();if(file.type.startsWith("image/")){let f=await resizeImage(file);showAttachment(f,URL.createObjectURL(f))}else {showAttachment(file);if (/\.pdf$/i.test(file.name)&&toolMode==="auto")setMode("document")}}catch(e){el("composerStatus").textContent=e.message}}async function attachGeneratedImage(url) {
+  const blob = await (await fetch(url)).blob();
+  showAttachment(new File([blob], "generated-image." + blob.type.split("/")[1], { type: blob.type }), url);
+  setMode("image");
+  input.focus();
+}
+async function send() {
+  if (!user) return showModal("authModal");
+  const button = el("sendBtn");
+  if (button.disabled) return;
+  const mode = toolMode;
+  const prompt = input.value.trim();
+  const file = attachedFile || (mode === "document" && !activeProject ? pendingPdf : null);
+  if (!prompt && !file) return;
+  const account = user.id;
+  const projectId = activeProject?.id;
+  const conversation = history;
+  const newPdf = file && /\.pdf$/i.test(file.name);
+  const userMessage = { role: "user", kind: "text", content: (file ? `📎 ${file.name}\n` : "") + (prompt || "Analyze this file") };
+  const progress = mode === "video" ? "Generating video…" : mode === "image" ? "Creating image…" : mode === "document" ? "Reading sources…" : "Working…";
+  conversation.push(userMessage, { role: "assistant", content: progress, pending: true });
+  const index = conversation.length - 1;
+  button.disabled = true;
+  el("composerStatus").textContent = progress;
+  input.value = "";
+  autoGrow();
+  render();
+  window.scrollTo({ top: document.body.scrollHeight });
+  try {
+    const form = new FormData();
+    form.set("prompt", prompt);
+    form.set("mode", mode);
+    if (mode === "video" || mode === "image") {
+      form.set("format", el("mediaFormat").value);
+      form.set("style", el("mediaStyle").value);
+    }
+    if (projectId) form.set("project", projectId);
+    if (mode === "document" && !projectId) {
+      const context = conversation.slice(0, index - 1).slice(-8).map(message => ({
+        role: message.role, content: String(message.content || "").slice(0, 600),
+      }));
+      form.set("context", JSON.stringify(context));
+    }
+    if (file && projectId && mode === "document" && newPdf) {
+      await uploadProjectDocument(file);
+      if (user?.id !== account) return;
+      clearAttachment();
+      if (!prompt) form.set("prompt", "Summarize the main points across the project PDFs.");
+    } else if (file) {
+      let upload = file;
+      if (file.type.startsWith("image/") && (mode === "image" || (mode === "auto" && !/\b(video|animate|animation|motion|clip|describe|analyze|analyse|explain|identify|extract text|ocr)\b/i.test(prompt)))) {
+        upload = await resizeImage(file, 512);
+      }
+      form.set("file", upload, upload.name);
+    }
+    const data = await api("/api/ai", { method: "POST", headers: headers(), body: form });
+    if (user?.id !== account) return;
+    if (mode === "document" && newPdf && !projectId && file !== pendingPdf) {
+      pendingPdf = file;
+      pendingPdfUrl = URL.createObjectURL(file);
+      pdfUrls.add(pendingPdfUrl);
+    }
+    conversation[index] = {
+      role: "assistant",
+      kind: data.type,
+      content: data.reply,
+      url: data.imageDataUrl || data.videoUrl,
+      artifact: data.artifact,
+      citations: data.citations,
+      projectId,
+      pdfUrl: mode === "document" ? pendingPdfUrl : null,
+    };
+    if (attachedFile === file) clearAttachment();
+    await refreshMeOnly();
+  } catch (error) {
+    conversation[index] = { role: "assistant", content: error.message };
+    if (user?.id === account && !input.value) {
+      input.value = prompt;
+      autoGrow();
+    }
+    if (error.code === "UPGRADE_REQUIRED") showModal("plansModal");
+  } finally {
+    button.disabled = false;
+    el("composerStatus").textContent = "";
+    if (history === conversation) {
+      render();
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    }
+  }
+}
+
 async function refreshMeOnly(){try{let d=await api("/api/me",{headers:headers()});user=d.user;setUserUI()}catch{}}
 async function showUsage(){if(!user){showModal("authModal");return}try{let d=await api("/api/me",{headers:headers()});user=d.user;setUserUI();document.getElementById("usagePlan").textContent=user.owner_unlimited===true?"Owner Unlimited • No expiry • No plan usage limits":({free:"Free",ai_pro:"AI Pro",builder:"Builder Pro",engineering:"Engineering Pro"}[user.plan]||user.plan)+` • Video credits: ${user.video_credits}`;let g=document.getElementById("usageGrid");g.innerHTML="";Object.entries(d.usage||{}).forEach(([k,v])=>{let x=document.createElement("div");x.className="usageitem";x.innerHTML=`<strong>${esc(k.replace(/_/g," "))}</strong><div>${v.unlimited?"Unlimited access":`${v.used} / ${v.limit} per ${v.period}`}</div>`;g.appendChild(x)});showModal("usageModal")}catch(e){alert(e.message)}}
 async function startCheckout(plan){if(!user){showModal("authModal");return}if(user.owner_unlimited===true){alert("Your Owner account has unlimited access. No subscription payment is required.");return}if(!config?.payments_enabled){alert("Payment gateway is not configured yet. The owner must connect the merchant account first.");return}const button=document.querySelector(`.planBuy[data-plan="${plan}"]`);if(button)button.disabled=true;try{let d=await api("/api/payments/create",{method:"POST",headers:headers(true),body:JSON.stringify({plan})});window.location.href=d.payment_url}catch(e){alert(e.message);if(button)button.disabled=false}}
@@ -141,21 +324,22 @@ async function handlePaymentReturn(){if(!user)return;const u=new URL(location.hr
 async function showBilling(){if(!user){showModal("authModal");return}try{let d=await api("/api/billing",{headers:headers()});document.getElementById("billingPlan").textContent=`${d.plan_label} • ${d.provider}`;document.getElementById("billingStatus").innerHTML=user.owner_unlimited===true?`<strong>Owner Unlimited</strong><br>No app subscription, trial expiry, or plan usage limits.`:d.subscription_ends_at?`Current plan: <strong>${esc(d.plan_label)}</strong><br>Subscription ends: ${esc(fmtDate(d.subscription_ends_at))}`:`Current plan: <strong>${esc(d.plan_label)}</strong><br>No paid subscription expiry on file.`;let list=document.getElementById("billingList");list.innerHTML=(d.payments||[]).length?d.payments.map(p=>`<div class="billingrow"><div style="display:flex;justify-content:space-between;gap:8px"><strong>${esc(({ai_pro:"AI Pro",builder:"Builder Pro",engineering:"Engineering Pro"}[p.plan]||p.plan))}</strong><span class="status ${esc(p.status)}">${esc(p.status)}</span></div><div class="small">${esc(p.amount)} ${esc(p.currency)} • ${esc(fmtDate(p.created_at))}<br>Invoice: ${esc(p.invoice_id||"—")}</div></div>`).join(""):'<div class="note">No payments yet.</div>';showModal("billingModal")}catch(e){alert(e.message)}}
 function showAccount(){if(!user){showModal("authModal");return}document.getElementById("accountInfo").innerHTML=`<strong>${esc(user.email)}</strong><br>Plan: ${esc(user.plan)} • Login: ${esc(user.auth_provider||"email")}<br>Status: ${esc(user.status||"active")}`;document.getElementById("deleteConfirm").value="";document.getElementById("accountError").textContent="";showModal("accountModal")}
 async function clearHistory(){try{await api("/api/history/clear",{method:"POST",headers:headers()});history=[];render();alert("Chat history cleared.")}catch(e){alert(e.message)}}
-async function deleteAccount(){let err=document.getElementById("accountError");err.textContent="";try{await api("/api/account/delete",{method:"POST",headers:headers(true),body:JSON.stringify({confirm:document.getElementById("deleteConfirm").value})});token="";user=null;history=[];localStorage.removeItem("datacore_v6_token");localStorage.removeItem("datacore_v5_token");hideModal("accountModal");render();setUserUI();showModal("authModal")}catch(e){err.textContent=e.message}}
+async function deleteAccount(){let err=document.getElementById("accountError");err.textContent="";try{await api("/api/account/delete",{method:"POST",headers:headers(true),body:JSON.stringify({confirm:document.getElementById("deleteConfirm").value})});resetWorkspace();token="";user=null;history=[];localStorage.removeItem("datacore_v6_token");localStorage.removeItem("datacore_v5_token");hideModal("accountModal");render();setUserUI();showModal("authModal")}catch(e){err.textContent=e.message}}
 async function loadAdmin(){if(!user?.is_admin){alert("Admin access required.");return}let q=document.getElementById("adminSearch").value.trim();try{adminData=await api("/api/admin/dashboard?q="+encodeURIComponent(q),{headers:headers()});renderAdmin();showModal("adminModal")}catch(e){alert(e.message)}}
 function renderAdmin(){let s=adminData.summary||{},sg=document.getElementById("adminSummary");sg.innerHTML=[['Total users',s.total_users||0],['Paid users',s.paid_users||0],['Suspended',s.suspended_users||0],['Paid payments',s.paid_payments||0],['Revenue KWD',Number(s.revenue_kwd||0).toFixed(3)],['Payments',s.total_payments||0]].map(x=>`<div class="summarycard"><strong>${esc(x[0])}</strong><div>${esc(x[1])}</div></div>`).join("");let ul=document.getElementById("adminUsers");ul.innerHTML=(adminData.users||[]).map(u=>`<div class="userrow" data-user="${esc(u.id)}"><strong>${esc(u.email)}</strong><span>${esc(u.plan)} • ${esc(u.status)} • ${esc(u.auth_provider)} • usage ${esc(u.usage_total||0)}</span></div>`).join("");ul.querySelectorAll(".userrow").forEach(r=>r.onclick=()=>selectAdminUser(r.dataset.user));let tb=document.getElementById("adminPayments");tb.innerHTML=(adminData.payments||[]).map(p=>`<tr><td>${esc(p.email||"—")}</td><td>${esc(p.plan)}</td><td>${esc(p.amount)} ${esc(p.currency)}</td><td><span class="status ${esc(p.status)}">${esc(p.status)}</span></td><td>${esc(p.invoice_id||"—")}</td><td>${esc(fmtDate(p.created_at))}</td></tr>`).join("")}
 function selectAdminUser(id){let u=(adminData.users||[]).find(x=>x.id===id);if(!u)return;document.getElementById("ctlUserId").value=u.id;document.getElementById("ctlEmail").value=u.email;document.getElementById("ctlPlan").value=u.plan;document.getElementById("ctlStatus").value=u.status;document.getElementById("ctlCredits").value=u.video_credits;document.getElementById("ctlSubEnd").value=u.subscription_ends_at?new Date(Number(u.subscription_ends_at)).toISOString().slice(0,10):"";document.getElementById("ctlNote").value=u.admin_note||"";document.getElementById("selectedUserLabel").textContent=`${u.email} • signed up ${fmtDate(u.created_at)} • last login ${fmtDate(u.last_login_at)}`;document.getElementById("ctlError").textContent=""}
 async function saveAdminUser(){let id=document.getElementById("ctlUserId").value,err=document.getElementById("ctlError");err.textContent="";if(!id){err.textContent="Select a user first.";return}let date=document.getElementById("ctlSubEnd").value;let payload={userId:id,plan:document.getElementById("ctlPlan").value,status:document.getElementById("ctlStatus").value,setVideoCredits:Number(document.getElementById("ctlCredits").value||0),subscriptionEndsAt:date?new Date(date+"T23:59:59Z").getTime():null,adminNote:document.getElementById("ctlNote").value};try{let d=await api("/api/admin/user",{method:"POST",headers:headers(true),body:JSON.stringify(payload)});err.style.color="#8ef0c7";err.textContent="Saved.";await loadAdmin();selectAdminUser(d.user.id)}catch(e){err.style.color="#ff9aa4";err.textContent=e.message}}
-function logoutLocal(){token="";user=null;history=[];localStorage.removeItem("datacore_v6_token");localStorage.removeItem("datacore_v5_token");render();setUserUI();showModal("authModal")}
+function logoutLocal(){resetWorkspace();token="";user=null;history=[];localStorage.removeItem("datacore_v6_token");localStorage.removeItem("datacore_v5_token");render();setUserUI();showModal("authModal")}
 async function logout(){try{if(token)await api("/api/logout",{method:"POST",headers:headers()})}catch{}logoutLocal()}
 
 document.getElementById("loginTab").onclick=()=>{authMode="login";document.getElementById("loginTab").classList.add("active");document.getElementById("signupTab").classList.remove("active");document.getElementById("authSubmit").textContent="Sign in";document.getElementById("authPassword").autocomplete="current-password"};
 document.getElementById("signupTab").onclick=()=>{authMode="signup";document.getElementById("signupTab").classList.add("active");document.getElementById("loginTab").classList.remove("active");document.getElementById("authSubmit").textContent="Create free account";document.getElementById("authPassword").autocomplete="new-password"};
-document.getElementById("authSubmit").onclick=doAuth;document.getElementById("attachBtn").onclick=()=>fileInput.click();fileInput.onchange=()=>{let f=fileInput.files[0];if(f)pickFile(f)};document.getElementById("removeFile").onclick=clearAttachment;document.getElementById("sendBtn").onclick=send;input.addEventListener("input",autoGrow);input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}});document.querySelectorAll("[data-prompt]").forEach(b=>b.onclick=()=>{input.value=b.dataset.prompt;autoGrow();input.focus()});document.getElementById("menuBtn").onclick=()=>document.getElementById("drawer").classList.add("open");document.getElementById("shade").onclick=closeDrawer;
-document.getElementById("newChat").onclick=async()=>{if(user)try{await api("/api/history/clear",{method:"POST",headers:headers()})}catch{}history=[];render();closeDrawer()};document.getElementById("usageBtn").onclick=()=>{closeDrawer();showUsage()};document.getElementById("plansBtn").onclick=()=>{closeDrawer();showModal("plansModal")};document.getElementById("billingBtn").onclick=()=>{closeDrawer();showBilling()};document.getElementById("accountBtn").onclick=()=>{closeDrawer();showAccount()};document.getElementById("privacyBtn").onclick=()=>{closeDrawer();showModal("privacyModal")};document.getElementById("termsBtn").onclick=()=>{closeDrawer();showModal("termsModal")};document.getElementById("adminBtn").onclick=()=>{closeDrawer();loadAdmin()};document.getElementById("adminRefresh").onclick=loadAdmin;document.getElementById("adminSearch").addEventListener("keydown",e=>{if(e.key==="Enter")loadAdmin()});document.getElementById("ctlSave").onclick=saveAdminUser;document.getElementById("clearHistoryBtn").onclick=clearHistory;document.getElementById("deleteAccountBtn").onclick=deleteAccount;document.querySelectorAll(".planBuy").forEach(b=>b.onclick=()=>startCheckout(b.dataset.plan));
-document.getElementById("fxBtn").onclick=()=>{document.body.classList.toggle("pausefx");document.getElementById("fxBtn").textContent=document.body.classList.contains("pausefx")?"✨ Play animations":"✨ Pause animations"};document.getElementById("logoutBtn").onclick=logout;document.querySelectorAll(".closeModal").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("show"));document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m&&m.id!=="authModal")m.classList.remove("show")}));
+document.getElementById("authSubmit").onclick=doAuth;document.getElementById("attachBtn").onclick=()=>fileInput.click();fileInput.onchange=()=>{let f=fileInput.files[0];if(f)pickFile(f)};document.getElementById("removeFile").onclick=clearAttachment;document.getElementById("sendBtn").onclick=send;input.addEventListener("input",autoGrow);input.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey&&!e.isComposing){e.preventDefault();send()}});document.querySelectorAll("[data-prompt]").forEach(b=>b.onclick=()=>{input.value=b.dataset.prompt;autoGrow();input.focus()});document.getElementById("menuBtn").onclick=()=>document.getElementById("drawer").classList.add("open");document.getElementById("shade").onclick=closeDrawer;
+document.getElementById("newChat").onclick=()=>{if(el("sendBtn").disabled)return;setProject(null);history=[];render();closeDrawer();input.focus()};document.getElementById("usageBtn").onclick=()=>{closeDrawer();showUsage()};document.getElementById("plansBtn").onclick=()=>{closeDrawer();showModal("plansModal")};document.getElementById("billingBtn").onclick=()=>{closeDrawer();showBilling()};document.getElementById("accountBtn").onclick=()=>{closeDrawer();showAccount()};document.getElementById("privacyBtn").onclick=()=>{closeDrawer();showModal("privacyModal")};document.getElementById("termsBtn").onclick=()=>{closeDrawer();showModal("termsModal")};document.getElementById("adminBtn").onclick=()=>{closeDrawer();loadAdmin()};document.getElementById("adminRefresh").onclick=loadAdmin;document.getElementById("adminSearch").addEventListener("keydown",e=>{if(e.key==="Enter")loadAdmin()});document.getElementById("ctlSave").onclick=saveAdminUser;document.getElementById("clearHistoryBtn").onclick=clearHistory;document.getElementById("deleteAccountBtn").onclick=deleteAccount;document.querySelectorAll(".planBuy").forEach(b=>b.onclick=()=>startCheckout(b.dataset.plan));
+document.getElementById("logoutBtn").onclick=logout;document.querySelectorAll(".closeModal").forEach(b=>b.onclick=()=>b.closest(".modal").classList.remove("show"));document.querySelectorAll(".modal").forEach(m=>m.addEventListener("click",e=>{if(e.target===m&&m.id!=="authModal")m.classList.remove("show")}));
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredInstall=e;document.getElementById("installBanner").classList.add("show")});document.getElementById("installBtn").onclick=async()=>{if(!deferredInstall)return;deferredInstall.prompt();await deferredInstall.userChoice;deferredInstall=null;document.getElementById("installBanner").classList.remove("show")};document.getElementById("installClose").onclick=()=>document.getElementById("installBanner").classList.remove("show");
 if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+initWorkspace();
 (async()=>{render();setUserUI();await loadConfig();await me()})();
 </script>
 </body>
