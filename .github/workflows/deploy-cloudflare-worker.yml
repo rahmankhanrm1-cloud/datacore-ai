@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - 'worker.js'
+      - 'workspace.js'
+      - 'media.js'
+      - 'notion-read.js'
+      - 'package*.json'
       - 'wrangler.jsonc'
       - '.github/workflows/deploy-cloudflare-worker.yml'
   workflow_dispatch:
@@ -24,6 +28,12 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
 
       - name: Check Cloudflare credentials
         env:

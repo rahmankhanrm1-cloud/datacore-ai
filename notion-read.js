@@ -33,6 +33,7 @@ function cleanRow(page, source) {
       priority: propertyText(p, "Priority"),
       category: propertyText(p, "Category"),
       notes: propertyText(p, "Notes"),
+      due: p["Due Date"]?.date?.start || p.Due?.date?.start || "",
       githubUrl: propertyText(p, "GitHub Link"),
     };
   }
@@ -52,7 +53,7 @@ function cleanRow(page, source) {
  * requireAdmin() in worker.js has validated the caller's existing session.
  * Pass the existing json() wrapper from worker.js for consistent headers.
  */
-export async function notionReadOnly(request, env, action, jsonResult) {
+export async function notionReadOnly(request, env, action, jsonResult, internalPage) {
   const configured = !!String(env.NOTION_API_TOKEN || "").trim();
   if (action === "status") {
     return jsonResult({
@@ -82,7 +83,7 @@ export async function notionReadOnly(request, env, action, jsonResult) {
         "Notion-Version": NOTION_VERSION,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ page_size: 25 }),
+      body: JSON.stringify({ page_size: 25, ...(internalPage?.cursor ? { start_cursor: internalPage.cursor } : {}) }),
       redirect: "error",
       signal: AbortSignal.timeout(12000),
     });
@@ -106,7 +107,7 @@ export async function notionReadOnly(request, env, action, jsonResult) {
       mode: "owner-only-read-only",
       items: data.results.filter(r => r?.object === "page").slice(0, 25).map(r => cleanRow(r, source)),
       hasMore: !!data.has_more,
-      // No pagination cursor is accepted from the caller during the initial pilot.
+      ...(internalPage ? { nextCursor: typeof data.next_cursor === "string" ? data.next_cursor : null } : {}),
     });
   } catch {
     return jsonResult({ ok: false, error: "Notion returned an unreadable response.", code: "NOTION_FORMAT_ERROR" }, 502);

@@ -1,0 +1,104 @@
+:root {
+  --bg: #f4f5f0;
+  --panel: #fff;
+  --panel2: #e9ede4;
+  --text: #17221d;
+  --muted: #53645a;
+  --line: #d9e0d8;
+  --a: #c2e8cf;
+  --b: #92c8a6;
+  --good: #21754b;
+  --warn: #805b0e;
+  --danger: #a5323e;
+  --shadow: 0 20px 60px #15322518;
+}
+body { font-family: "DM Sans", system-ui, sans-serif; }
+[hidden] { display: none !important; }
+.fx, .orb { display: none; }
+.shell { max-width: none; }
+.header {
+  background: #fbfcf9ee;
+  padding-inline: clamp(18px, 5vw, 76px);
+  height: 72px;
+}
+.brand { gap: 12px; }
+.brand h1 { font-size: 1.24rem; font-weight: 750; letter-spacing: -.055em; }
+.brand .logo { width: 38px; height: 38px; flex-basis: 38px; border-radius: 10px; }
+.brand p { display: none; }
+.headright { gap: 10px; }
+.header .adminpill { color: #246447; border-color: #a2c2af; }
+.header .iconbtn, .header .secondary, .header .planpill {
+  background: #f2f5ef;
+  border-color: var(--line);
+  color: var(--text);
+}
+.workspace-bar { display: flex; gap: 8px; align-items: center; }
+.workspace-title { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: .82rem; }
+.main { width: min(100%, 950px); margin-inline: auto; padding: 26px 24px 230px; }
+.welcome { max-width: 860px; margin: 9vh auto 0; text-align: left; padding: 0; }
+.welcome h2 { margin: 0; font: 500 clamp(3.6rem, 8vw, 7rem)/.9 "Instrument Serif", Georgia, serif; letter-spacing: -.055em; }
+.welcome h2 em { color: #3f7457; font-weight: 400; }
+.welcome p { font-size: 1rem; max-width: 530px; margin: 21px 0 34px; color: var(--muted); }
+.tool-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.tool-tile { display: grid; gap: 14px; text-align: left; min-height: 111px; padding: 14px; background: #fdfefa; border: 1px solid var(--line); border-radius: 14px; color: var(--text); cursor: pointer; }
+.tool-tile:hover { background: #e8f4eb; border-color: #9dc6ad; }
+.tool-tile strong { font-size: .9rem; }
+.tool-tile span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: #deeee3; color: #255e41; font-weight: 750; }
+.composerbox { background: linear-gradient(to top, var(--bg) 80%, transparent); padding: 12px 16px max(13px, env(safe-area-inset-bottom)); }
+.composerWrap { max-width: 900px; }
+.composer { background: #fff; border: 1px solid #cbd8cd; border-radius: 19px; box-shadow: var(--shadow); }
+.composer:focus-within { border-color: #75a88a; }
+.composer textarea { color: var(--text); }
+.composer textarea::placeholder { color: var(--muted); }
+.composer .send { background: #214c36; color: #fff; border-radius: 12px; font-size: .85rem; min-width: 58px; }
+.composer .attach, .composer .mic, .composer .paste { background: #eaf1e9; color: #214c36; border: 0; border-radius: 10px; cursor: pointer; font-weight: 700; }
+.composer .mic, .composer .paste { padding: 10px; align-self: center; }
+.composer textarea { min-width: 0; }
+.composer .mic[aria-pressed="true"] { background: #f4d7d6; color: #801e24; }
+.composer-tools, .media-controls { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.composer-tools { padding: 0 0 7px; }
+.composer-tools select { max-width: 150px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; background: #fbfcf8; color: var(--text); font: inherit; font-size: .8rem; }
+#composerStatus:not(:empty) { padding: 6px 2px 0; color: var(--muted); text-align: left; }
+.attachment, .panel, .modalcard { background: #fff; color: var(--text); }
+.profile, .menuitem, .modal .note, .modal .summarycard, .modal .usageitem, .modal .billingrow, .modal .plan, .modal .userrow, .modal .controlbox, .googlewrap { background: #f1f5ee; color: var(--text); }
+.modal input, .modal select, .modal textarea { background: #f8faf6; color: var(--text); border: 1px solid var(--line); border-radius: 9px; padding: 10px; font: inherit; }
+.modal a, .citations a { color: #205e3d; }
+.modal .iconbtn, .secondary, .menuitem, .mini { color: var(--text); }
+.modal .primary { color: #17221d; background: #b8dfc5; }
+.modal .error { color: var(--danger); }
+.modal .status { color: var(--text); }
+.modal .small, .small, .hint { color: var(--muted); }
+.avatar { background: #dceddf; color: #234c36; border: 1px solid #cfe2d2; }
+.bubble, .msg.assistant .bubble { background: #fff; border-color: var(--line); color: var(--text); border-radius: 16px; }
+.msg.user .bubble { background: #e4efe5; color: var(--text); }
+.bubble pre { background: #202e27; color: #eef8f0; }
+.bubble img, .bubble video { max-width: 100%; }
+.mini, .secondary, .iconbtn { background: #edf3eb; border-color: var(--line); }
+.citations { display: grid; gap: 6px; margin-top: 12px; font-size: .85rem; }
+.citations button { justify-self: start; text-align: left; }
+.workspace-modal { max-width: 630px; }
+.workspace-form, .workspace-modal label { display: grid; gap: 7px; }
+.workspace-form { gap: 12px; margin-block: 15px; }
+.workspace-form button { justify-self: start; }
+.project-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+.workspace-list { padding: 0; display: grid; gap: 10px; list-style: none; }
+.workspace-list li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+#digestList li { display: grid; justify-content: stretch; }
+#digestList a { font-weight: 700; }
+#sourceText { white-space: pre-wrap; overflow-wrap: anywhere; }
+#projectStatus, #digestStatus { min-height: 1.2em; }
+button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid #337654; outline-offset: 2px; }
+@media (max-width: 640px) {
+  .welcome { margin-top: 6vh; }
+  .tool-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tool-tile { min-height: 80px; gap: 8px; }
+  .workspace-title, .planpill { display: none; }
+  .header { padding-inline: 12px; height: 62px; }
+  .brand { gap: 6px; }
+  .brand .logo { width: 30px; height: 30px; flex-basis: 30px; }
+  #digestBtn { display: none; }
+  .headright { gap: 5px; }
+  .headright .secondary { padding-inline: 7px; font-size: .7rem; }
+  .main { padding-inline: 16px; }
+  .composer .mic, .composer .paste { padding-inline: 7px; }
+}
