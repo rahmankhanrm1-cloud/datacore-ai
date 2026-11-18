@@ -1,4 +1,4 @@
-const CACHE = "nibrasgpt-shell-2";
+const CACHE = "nibrasgpt-shell-3";
 const SHELL = ["./", "./index.html", "./workspace.css", "./workspace-ui.js", "./manifest.webmanifest", "./icon-192.webp", "./icon-512.webp"];
 
 self.addEventListener("install", event => {

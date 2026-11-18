@@ -62,7 +62,7 @@
     </select>
     <select id="voiceLanguage" aria-label="Dictation language"><option value="">Voice · Auto</option><option value="ar">العربية</option><option value="en">English</option></select>
   </div>
-  <div class="composer"><button class="attach" id="attachBtn" aria-label="Attach file">＋</button><textarea id="input" rows="1" aria-label="Message" dir="auto" placeholder="Ask or create…"></textarea><button class="mic" id="voiceBtn" aria-label="Toggle voice recording" aria-pressed="false">Mic</button><button class="send" id="sendBtn">Send</button></div>
+  <div class="composer"><button class="attach" id="attachBtn" aria-label="Attach file">＋</button><textarea id="input" rows="1" aria-label="Message" dir="auto" placeholder="Ask or create…"></textarea><button class="mic" id="voiceBtn" aria-label="Toggle voice recording" aria-pressed="false">Mic</button><button class="paste" id="pasteBtn" type="button" aria-label="Paste from clipboard">Paste</button><button class="send" id="sendBtn">Send</button></div>
   <div class="hint" id="composerStatus" role="status"></div>
   <div class="hint">AI can make mistakes. Engineering output must be reviewed by a qualified engineer before field use.</div>
   <input type="file" id="fileInput" hidden accept="image/*,.pdf,.docx,.xlsx,.xls,.xlsm,.xlsb,.csv,.ods,.odt,.numbers,.html,.htm,.xml,.txt,.md,.json,.js,.ts,.css,.py,.java,.kt,.dart,.sql,.scr,.lsp,.scad,.dxf">
@@ -197,7 +197,6 @@ function renderMessage(message) {
     media.src = safeImage ? message.url : safeVideo;
     bubble.append(media);
   } else if (assistant && !message.pending) {
-    actions.append(btn("Copy", () => navigator.clipboard.writeText(message.content || "")));
     actions.append(btn("Download", () => downloadText(message.content || "", message.artifact?.name || "nibrasgpt-result.txt")));
     if (message.artifact?.kind === "website") actions.append(btn("Save HTML", () => saveCode(message.content, "index.html", "html")));
     if (message.artifact?.kind === "cad") actions.append(btn("Save CAD script", () => saveCode(message.content, "nibrasgpt-engineering.scr", "scr")));
@@ -208,6 +207,11 @@ function renderMessage(message) {
       speech.lang = arabic ? "ar" : "en";
       speechSynthesis.speak(speech);
     }));
+  }
+  if (!message.pending && message.content && !safeImage && !safeVideo) {
+    const copy = btn("Copy", () => copyMessage(message.content));
+    copy.setAttribute("aria-label", assistant ? "Copy AI reply" : "Copy sent message");
+    actions.prepend(copy);
   }
   renderCitations(message, wrap);
   if (actions.children.length) wrap.append(actions);

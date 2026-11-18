@@ -260,7 +260,82 @@ async function captureVoice() {
   }
 }
 
+async function copyMessage(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const previous = document.activeElement;
+    const clipboardInput = document.createElement("textarea");
+    clipboardInput.value = text;
+    clipboardInput.readOnly = true;
+    clipboardInput.style.position = "fixed";
+    clipboardInput.style.opacity = "0";
+    document.body.append(clipboardInput);
+    clipboardInput.select();
+    let copied = false;
+    try {
+      copied = document.execCommand("copy");
+    } catch {
+      copied = false;
+    } finally {
+      clipboardInput.remove();
+      previous?.focus();
+    }
+    if (!copied) {
+      el("composerStatus").textContent = "Select the message text and use your browser’s Copy command.";
+      return;
+    }
+  }
+  el("composerStatus").textContent = "Copied.";
+}
+
+async function pasteFromClipboard() {
+  const status = el("composerStatus");
+  const selection = [input.selectionStart, input.selectionEnd];
+  const draft = input.value;
+  let text;
+  try {
+    if (navigator.clipboard?.read) {
+      const items = await navigator.clipboard.read();
+      const imageItem = items.find(item => item.types.some(type => type.startsWith("image/")));
+      if (imageItem) {
+        const type = imageItem.types.find(type => type.startsWith("image/"));
+        const blob = await imageItem.getType(type);
+        await pickFile(new File([blob], "clipboard-image." + type.split("/")[1], { type: blob.type || type }));
+        input.focus();
+        return;
+      }
+      const textItem = items.find(item => item.types.includes("text/plain"));
+      if (textItem) text = await (await textItem.getType("text/plain")).text();
+    }
+  } catch {
+    // Some browsers support reading plain text only.
+  }
+  try {
+    text ??= await navigator.clipboard.readText();
+    if (!text) {
+      status.textContent = "No text or image found on the clipboard.";
+      return;
+    }
+    input.focus();
+    if (input.value === draft) input.setRangeText(text, ...selection, "end");
+    else input.setRangeText(text, input.selectionStart, input.selectionEnd, "end");
+    autoGrow();
+    status.textContent = "Pasted into your draft.";
+  } catch {
+    input.focus();
+    status.textContent = "Use Ctrl+V, Command+V, or touch and hold the message field to paste.";
+  }
+}
+
 function initWorkspace() {
+  el("pasteBtn").onclick = pasteFromClipboard;
+  input.addEventListener("paste", event => {
+    const image = Array.from(event.clipboardData?.files || []).find(file => file.type.startsWith("image/"));
+    if (!image) return;
+    event.preventDefault();
+    pickFile(image);
+  });
   el("toolMode").onchange = event => setMode(event.target.value);
   document.querySelectorAll("[data-mode]").forEach(button => button.onclick = () => {
     setMode(button.dataset.mode);

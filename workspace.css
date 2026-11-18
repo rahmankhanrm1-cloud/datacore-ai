@@ -51,8 +51,9 @@ body { font-family: "DM Sans", system-ui, sans-serif; }
 .composer textarea { color: var(--text); }
 .composer textarea::placeholder { color: var(--muted); }
 .composer .send { background: #214c36; color: #fff; border-radius: 12px; font-size: .85rem; min-width: 58px; }
-.composer .attach, .composer .mic { background: #eaf1e9; color: #214c36; border: 0; border-radius: 10px; cursor: pointer; font-weight: 700; }
-.composer .mic { padding: 10px; align-self: center; }
+.composer .attach, .composer .mic, .composer .paste { background: #eaf1e9; color: #214c36; border: 0; border-radius: 10px; cursor: pointer; font-weight: 700; }
+.composer .mic, .composer .paste { padding: 10px; align-self: center; }
+.composer textarea { min-width: 0; }
 .composer .mic[aria-pressed="true"] { background: #f4d7d6; color: #801e24; }
 .composer-tools, .media-controls { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
 .composer-tools { padding: 0 0 7px; }
@@ -99,4 +100,5 @@ button:focus-visible, a:focus-visible, select:focus-visible, textarea:focus-visi
   .headright { gap: 5px; }
   .headright .secondary { padding-inline: 7px; font-size: .7rem; }
   .main { padding-inline: 16px; }
+  .composer .mic, .composer .paste { padding-inline: 7px; }
 }
