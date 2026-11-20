@@ -698,7 +698,7 @@ async function handleAI(request, env, user) {
   const fv = form.get("file"), file = fv instanceof File && fv.size > 0 ? fv : null;
   if (!prompt && !file) return json(request, { ok: false, error: "Type a message or attach a file." }, 400);
   if (file && file.size > 12 * 1024 * 1024) return json(request, { ok: false, error: "File is too large. Use a file under 12 MB." }, 413);
-  const intent = detectIntent(prompt, file), metric = metricFor(intent, file), allowed = await checkLimit(env, user, metric);
+  const intent = !file && form.get("mode") === "photo" ? "image_generate" : detectIntent(prompt, file), metric = metricFor(intent, file), allowed = await checkLimit(env, user, metric);
   if (!allowed.ok) return json(request, { ok: false, error: allowed.message, code: allowed.code, intent }, 402);
   await storeMessage(env, user.id, "user", "text", `${file ? `📎 ${file.name}\n` : ""}${prompt || "Analyze this file"}`);
   if (intent === "image_generate") {
