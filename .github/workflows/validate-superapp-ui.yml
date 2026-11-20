@@ -1,0 +1,29 @@
+name: Validate NibrasGPT Super App UI
+on:
+  push:
+    branches:
+      - feature/unified-prompt-router-20261120
+    paths:
+      - 'index.html'
+      - 'worker.js'
+      - 'tests/superapp-ui.test.mjs'
+      - '.github/workflows/validate-superapp-ui.yml'
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'worker.js'
+      - 'tests/superapp-ui.test.mjs'
+      - '.github/workflows/validate-superapp-ui.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run offline tests (no API charges)
+        run: node tests/superapp-ui.test.mjs
