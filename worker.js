@@ -403,7 +403,7 @@ async function runText(env, system, prompt, model) {
         model: NEMOTRON_MODEL, messages, max_tokens: 3000, temperature: 0.25, stream: false,
         chat_template_kwargs: { enable_thinking: false },
       }),
-      redirect: "error",
+      redirect: "manual",
       signal: controller.signal,
     });
   } catch {
