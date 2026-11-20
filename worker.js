@@ -818,7 +818,8 @@ async function handleAI(request, env, user) {
     answer = await runText(env, systemFor(intent === "file_analysis" ? "file_analysis" : intent), `User request:\n${prompt || "Analyze this file and summarize the important information."}\n\nUploaded file: ${file.name}\n\nFile content:\n${content}`, form.get("model"));
   } else answer = await runText(env, systemFor(intent), prompt, form.get("model"));
   const activePlan = PLAN_LIMITS[user.plan] || PLAN_LIMITS.free, metricSpec = activePlan[metric] || activePlan.chat;
-  await incrementUsage(env, user.id, metric, metricSpec.period); await storeMessage(env, user.id, "assistant", "text", answer);
+  const savedAnswer = sources.length ? answer + "\n\nSources consulted:\n" + sources.map((source, i) => `[${i+1}] ${source.title} — ${source.url}`).join("\n") : answer;
+  await incrementUsage(env, user.id, metric, metricSpec.period); await storeMessage(env, user.id, "assistant", "text", savedAnswer);
   return json(request, { ok: true, type: "text", intent, search_mode:searchLevel, sources, reply: answer, artifact: artifactFor(intent) });
 }
 
