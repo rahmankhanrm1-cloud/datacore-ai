@@ -392,6 +392,8 @@ async function runText(env, system, prompt, model) {
   }
   const key = String(env.NVIDIA_API_KEY || "").trim();
   if (!key) throw new Error("NVIDIA Nemotron has not been configured.");
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 45000);
   let response;
   try {
     response = await fetch(NVIDIA_CHAT_URL, {
@@ -402,10 +404,12 @@ async function runText(env, system, prompt, model) {
         chat_template_kwargs: { enable_thinking: false },
       }),
       redirect: "error",
-      signal: AbortSignal.timeout(45000),
+      signal: controller.signal,
     });
   } catch {
     throw new Error("NVIDIA Nemotron is temporarily unavailable. Please retry or select the default model.");
+  } finally {
+    clearTimeout(timeout);
   }
   if (response.status === 429) throw new Error("NVIDIA Nemotron is busy. Please retry shortly.");
   if (!response.ok) throw new Error("NVIDIA Nemotron could not complete the request. Please retry or select the default model.");
