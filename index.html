@@ -58,6 +58,8 @@ html,body{background:var(--bg);color:var(--text)}
 .searchStatus{font-size:11px;color:#586f72;padding:6px 9px 0;min-height:20px}
 .featureSheet{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .featureSheet[hidden]{display:none!important}
+.toolPicker{display:flex;align-items:center;gap:6px;font-size:12px;color:#234449;background:#f0f5f4;padding:5px 9px;border-radius:12px}
+.toolPicker #createMode{width:auto;max-width:none;min-width:90px;color:#234449}
 .attachment{background:#f6f8f8;color:#192f32}
 .attachment .attxt span{color:#647076}
 .panel,.modalcard{--text:#f3f6ff;--muted:#9ba8c7;--line:rgba(255,255,255,.13);color:var(--text)}
@@ -114,6 +116,7 @@ html,body{background:var(--bg);color:var(--text)}
 <div class="composerbox"><div class="composerWrap">
   <div class="attachment" id="attachment"><img class="thumb" id="thumb" alt=""><div class="fileicon" id="fileIcon">📎</div><div class="attxt"><strong id="fileName"></strong><span id="fileMeta"></span></div><button class="remove" id="removeFile">×</button></div>
   <div class="featureSheet" id="featureSheet" hidden aria-label="Create and tools">
+    <label class="toolPicker">Selected tool <select id="createMode" aria-label="AI creation mode"><option value="auto">Auto Tools</option><option value="photo">Photo</option><option value="video">Video</option></select></label>
     <button class="chip" data-create-mode="auto">💬 Chat & AI Tools</button>
     <button class="chip" data-create-mode="photo">🎨 Generate / Edit Photo</button>
     <button class="chip" data-create-mode="video">🎬 Text / Photo to Video</button>
@@ -126,7 +129,6 @@ html,body{background:var(--bg);color:var(--text)}
     <div class="composeActions">
       <button type="button" class="featurePlus" id="featureBtn" aria-label="Open AI tools" aria-expanded="false">+</button>
       <button type="button" class="attach" id="attachBtn" aria-label="Attach file">📎</button>
-      <select id="createMode" aria-label="AI creation mode"><option value="auto">Auto Tools</option><option value="photo">Photo</option><option value="video">Video</option></select>
       <div class="searchModes" role="group" aria-label="Search depth">
         <button type="button" data-search-mode="light" aria-pressed="true">Light</button>
         <button type="button" data-search-mode="medium" aria-pressed="false">Medium</button>
@@ -244,6 +246,12 @@ function updateSearchUI() {
     btn.setAttribute("aria-pressed", String(btn.dataset.searchMode === searchMode));
   });
   const status = document.getElementById("searchStatus");
+  if (document.getElementById("createMode")?.value === "photo") {
+    status.textContent = "Photo mode selected: enter a prompt or attach a photo to edit."; return;
+  }
+  if (document.getElementById("createMode")?.value === "video") {
+    status.textContent = "Video mode selected: enter a prompt or attach a photo. Provider access and quotas apply."; return;
+  }
   status.textContent = searchMode === "light" ? "Light: AI answer without live web search." :
     (config?.web_search_enabled
       ? (searchMode === "deep" ? "Deep Search: research multiple live queries and cite sources." : "Medium: search live web sources and cite them.")
@@ -260,9 +268,9 @@ const defaultHint = input.placeholder;
 function updateCreateHint() {
   input.placeholder = {photo:"Describe the photo to generate or edit…",video:"Describe the video to create, or attach a photo…"}[createMode.value] || defaultHint;
 }
-createMode.onchange = updateCreateHint;
+createMode.onchange = () => {updateCreateHint(); updateSearchUI();};
 document.querySelectorAll("[data-create-mode]").forEach(button => {
-  button.onclick = () => { createMode.value = button.dataset.createMode; featureSheet.hidden = true; featureButton.setAttribute("aria-expanded", "false"); updateCreateHint(); input.focus(); };
+  button.onclick = () => { createMode.value = button.dataset.createMode; featureSheet.hidden = true; featureButton.setAttribute("aria-expanded", "false"); updateCreateHint(); updateSearchUI(); input.focus(); };
 });
 
 async function send() {
