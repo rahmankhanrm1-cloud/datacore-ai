@@ -339,14 +339,16 @@ function isPlainText(file) {
 function detectIntent(prompt, file) {
   const p = lower(prompt), hasFile = !!file, img = isImage(file);
   const videoWords = /\b(video|animate|animation|image to video|text to video|make .* move|camera orbit|orbit camera|camera move|motion|cinematic clip|short clip)\b/;
-  if (hasFile && img && videoWords.test(p)) return "video_i2v";
-  if (!hasFile && videoWords.test(p) && /\b(create|generate|make|text to video|video)\b/.test(p)) return "video_t2v";
+  const tamilVideo = /(வீடியோ|விடியோ|காணொளி|அனிமேஷன்)/u.test(p);
+  const tamilCreate = /(உருவாக்க|தயார்|செய்|அசை|ஆக்கு)/u.test(p);
+  if (hasFile && img && (videoWords.test(p) || tamilVideo)) return "video_i2v";
+  if (!hasFile && ((videoWords.test(p) && /\b(create|generate|make|text to video|video)\b/.test(p)) || (tamilVideo && tamilCreate))) return "video_t2v";
   if (/\b(autocad|auto cad|cad|3d diagram|3d model|3d drawing|piping isometric|isometric drawing|pipe routing|pipeline layout|equipment layout|plant layout|oil and gas|oil & gas|p&id|pid drawing|civil drawing|structural drawing|mechanical layout)\b/.test(p)) return "cad";
   const imageEdit = /\b(edit|change|replace|remove|add|modify|transform|enhance|retouch|upscale|background|dress|shirt|hair|lighting|cinematic|make this|turn this|keep .* face|keep .* subject)\b/.test(p);
   const imageAnalyze = /\b(what is|what's|describe|analy[sz]e|explain|identify|read|tell me about|what do you see|extract text|ocr)\b/.test(p);
   const imageCreate = /\b(generate|create|make|draw|render|design)\b.*\b(image|photo|picture|poster|logo|illustration|art|wallpaper|drone view|aerial view)\b|\b(text\s*to\s*image|image generation|drone view|aerial view)\b/.test(p);
   if (hasFile && img) { if (imageAnalyze && !imageEdit) return "image_analysis"; return "image_edit"; }
-  if (!hasFile && imageCreate) return "image_generate";
+  if (!hasFile && (imageCreate || (/(படம்|புகைப்படம்|போட்டோ|ஓவியம்)/u.test(p) && tamilCreate))) return "image_generate";
   if (/\b(build|create|make|design|generate)\b.*\b(website|web site|landing page|webpage|web page)\b|\bwebsite builder\b/.test(p)) return "website";
   if (/\b(build|create|make|design|generate)\b.*\b(android app|mobile app|ios app|app|application)\b|\bapp builder\b/.test(p)) return "app";
   if (/\b(code|coding|program|script|debug|html|css|javascript|typescript|python|java|kotlin|flutter|react native|sql)\b/.test(p)) return "code";
