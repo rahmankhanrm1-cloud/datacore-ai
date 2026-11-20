@@ -36,6 +36,9 @@ assert.equal(sandbox.normalizedSearchLevel("deep"), "deep");
 assert.equal(sandbox.normalizedSearchLevel("DEEP"), "deep");
 assert.equal(sandbox.normalizedSearchLevel("unknown"), null);
 assert.equal(sandbox.normalizedSearchLevel(null), "light");
+assert.equal(sandbox.detectIntent("ஒரு வீடியோ உருவாக்கு", null), "video_t2v");
+assert.equal(sandbox.detectIntent("ஒரு புகைப்படம் உருவாக்கு", null), "image_generate");
+assert.equal(sandbox.detectIntent("இந்த படத்தை வீடியோ ஆக்கு", {name:"image.jpg",type:"image/jpeg"}), "video_i2v");
 
 await assert.rejects(sandbox.researchWithSources({}, "Kuwait headlines", "medium"), error => error.code==="SEARCH_NOT_CONFIGURED");
 const authCalls=[];
