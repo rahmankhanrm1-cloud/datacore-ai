@@ -7,6 +7,8 @@ const CORS_BASE = {
 };
 
 const TEXT_MODEL = "@cf/meta/llama-4-scout-17b-16e-instruct";
+const NEMOTRON_MODEL = "nvidia/nemotron-3.5-super-vl-120b-a12b";
+const NVIDIA_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const IMAGE_MODEL = "@cf/black-forest-labs/flux-2-klein-4b";
 const VIDEO_T2V_MODEL = "alibaba/hh1.1-t2v";
 const VIDEO_I2V_MODEL = "alibaba/hh1.1-i2v";
@@ -382,9 +384,35 @@ function systemFor(intent) {
   };
   return map[intent] || map.chat;
 }
-async function runText(env, system, prompt) {
-  const r = await env.AI.run(TEXT_MODEL, { messages: [{ role: "system", content: system }, { role: "user", content: prompt }], max_tokens: 3000, temperature: 0.25 });
-  return r?.response || "";
+async function runText(env, system, prompt, model) {
+  const messages = [{ role: "system", content: system }, { role: "user", content: prompt }];
+  if (model !== "nemotron") {
+    const result = await env.AI.run(TEXT_MODEL, { messages, max_tokens: 3000, temperature: 0.25 });
+    return result?.response || "";
+  }
+  const key = String(env.NVIDIA_API_KEY || "").trim();
+  if (!key) throw new Error("NVIDIA Nemotron has not been configured.");
+  let response;
+  try {
+    response = await fetch(NVIDIA_CHAT_URL, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        model: NEMOTRON_MODEL, messages, max_tokens: 3000, temperature: 0.25, stream: false,
+        chat_template_kwargs: { enable_thinking: false },
+      }),
+      redirect: "error",
+      signal: AbortSignal.timeout(45000),
+    });
+  } catch {
+    throw new Error("NVIDIA Nemotron is temporarily unavailable. Please retry or select the default model.");
+  }
+  if (response.status === 429) throw new Error("NVIDIA Nemotron is busy. Please retry shortly.");
+  if (!response.ok) throw new Error("NVIDIA Nemotron could not complete the request. Please retry or select the default model.");
+  const result = await response.json().catch(() => null);
+  const reply = result?.choices?.[0]?.message?.content;
+  if (typeof reply !== "string" || !reply.trim()) throw new Error("NVIDIA Nemotron returned no answer. Please retry.");
+  return reply;
 }
 async function runFlux(env, prompt, sourceBlob = null) {
   const fd = new FormData(); fd.append("prompt", prompt); fd.append("width", "1024"); fd.append("height", "1024");
@@ -696,8 +724,8 @@ async function handleAI(request, env, user) {
   let answer;
   if (file) {
     const content = await convertFile(env, file);
-    answer = await runText(env, systemFor(intent === "file_analysis" ? "file_analysis" : intent), `User request:\n${prompt || "Analyze this file and summarize the important information."}\n\nUploaded file: ${file.name}\n\nFile content:\n${content}`);
-  } else answer = await runText(env, systemFor(intent), prompt);
+    answer = await runText(env, systemFor(intent === "file_analysis" ? "file_analysis" : intent), `User request:\n${prompt || "Analyze this file and summarize the important information."}\n\nUploaded file: ${file.name}\n\nFile content:\n${content}`, form.get("model"));
+  } else answer = await runText(env, systemFor(intent), prompt, form.get("model"));
   const activePlan = PLAN_LIMITS[user.plan] || PLAN_LIMITS.free, metricSpec = activePlan[metric] || activePlan.chat;
   await incrementUsage(env, user.id, metric, metricSpec.period); await storeMessage(env, user.id, "assistant", "text", answer);
   return json(request, { ok: true, type: "text", intent, reply: answer, artifact: artifactFor(intent) });
@@ -725,7 +753,7 @@ export default {
         return json(request, { ok: coreOk, version: "6.0", checks, payment_mode: String(env.MYFATOORAH_MODE || "test") }, coreOk ? 200 : 500);
       }
       if (request.method === "GET" && path === "/api/config") {
-        return json(request, { ok: true, version: "6.0", google_enabled: !!env.GOOGLE_CLIENT_ID, google_client_id: env.GOOGLE_CLIENT_ID || "", payments_enabled: !!env.MYFATOORAH_API_KEY, payment_provider: "MyFatoorah", payment_mode: String(env.MYFATOORAH_MODE || "test"), plans: Object.entries(PLAN_PRICES).map(([id,p]) => ({ id, label: planLabel(id), kwd: p.kwd, usd: p.usd })) });
+        return json(request, { ok: true, version: "6.0", nemotron_enabled: !!env.NVIDIA_API_KEY, google_enabled: !!env.GOOGLE_CLIENT_ID, google_client_id: env.GOOGLE_CLIENT_ID || "", payments_enabled: !!env.MYFATOORAH_API_KEY, payment_provider: "MyFatoorah", payment_mode: String(env.MYFATOORAH_MODE || "test"), plans: Object.entries(PLAN_PRICES).map(([id,p]) => ({ id, label: planLabel(id), kwd: p.kwd, usd: p.usd })) });
       }
       if (request.method === "GET" && path === "/") return json(request, { ok: true, name: "NibrasGPT", version: "6.0", features: ["email-auth","google-auth","admin-dashboard","user-controls","myfatoorah-payments","auto-plan-activation","server-usage","chat","image","documents","website","app","code","cad","text-video","image-video","pwa"] });
 
