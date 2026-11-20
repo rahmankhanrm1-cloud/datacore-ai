@@ -1,0 +1,21 @@
+name: Verify Cloudflare access
+on:
+  push:
+    branches: [verify/cloudflare-access-20261120]
+permissions: {}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify repository credentials and Worker access
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [[ -z "$CF_TOKEN" ]]; then echo "::error::Missing CLOUDFLARE_API_TOKEN"; exit 1; fi
+          if [[ ! "$CF_ACCOUNT" =~ ^[0-9a-fA-F]{32}$ ]]; then echo "::error::Missing or invalid account ID"; exit 1; fi
+          curl --silent --show-error --fail --max-time 20 \
+            -H "Authorization: Bearer $CF_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/workers/scripts/datacore-ai-api/deployments" \
+            | jq -e '.success == true and (.result.deployments | length > 0)' >/dev/null
