@@ -103,8 +103,9 @@ function drawLinks(){
  svg.innerHTML="";
  for(const n of nodes){const src=nodes.find(x=>x.id===n.input);if(!src)continue;
   const startX=src.x+268,startY=src.y+58,endX=n.x,endY=n.y+58,curve=Math.max(60,Math.abs(endX-startX)*.46);
-  const path=make("path",{d:"M "+startX+" "+startY+" C "+(startX+curve)+" "+startY+", "+(endX-curve)+" "+endY+", "+endX+" "+endY,
-    stroke:"#247a79","stroke-width":"2.5","stroke-opacity":".75",fill:"none"});
+  const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+  path.setAttribute("d","M "+startX+" "+startY+" C "+(startX+curve)+" "+startY+", "+(endX-curve)+" "+endY+", "+endX+" "+endY);
+  path.setAttribute("stroke","#247a79");path.setAttribute("stroke-width","2.5");path.setAttribute("stroke-opacity",".75");path.setAttribute("fill","none");
   svg.append(path);
  }
 }
