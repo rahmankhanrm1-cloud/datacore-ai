@@ -1,5 +1,6 @@
 import { notionReadOnly } from "./notion-read.js";
 import { buildOfficeDocument } from "./office-export.js";
+import { generateCosmosVideo,videoUrl,checkSignedVideo } from "./cosmos-video.js";
 
 const CORS_BASE = {
   "Access-Control-Allow-Origin": "*",
@@ -800,15 +801,23 @@ async function handleAI(request, env, user) {
     return json(request, { ok: true, type: "image", intent, reply: "Here is your edited image.", imageDataUrl: dataUrl });
   }
   if (intent === "video_t2v" || intent === "video_i2v") {
-    let videoUrl;
-    try { videoUrl = intent === "video_i2v" ? await generateImageVideo(request, env, file, prompt) : await generateTextVideo(env, prompt); }
-    catch (e) {
-      const msg = String(e?.message || "");
-      if (/billing|credit|payment|unified|permission/i.test(msg)) return json(request, { ok: false, code: "VIDEO_BILLING_REQUIRED", error: "Video generation is connected, but your Cloudflare account needs Unified Billing/prepaid AI credits before the third-party video model can run." }, 402);
-      throw e;
+    let generated;
+    try {
+      generated = await generateCosmosVideo(request,env,user,{
+        prompt,file:intent === "video_i2v"?file:null,
+        duration:Number(form.get("video_duration")||5)
+      });
+    } catch(e) {
+      return json(request,{ok:false,code:e.code||"VIDEO_PROVIDER_UNAVAILABLE",
+        error:String(e.message||"Video generation failed.")},
+        e.code==="COSMOS_QUOTA_REACHED"?429:e.code==="COSMOS_BILLING_REQUIRED"?402:503);
     }
-    if (!isAdminUser(env, user)) await decrementVideoCredit(env, user.id); await storeMessage(env, user.id, "assistant", "video", "Generated video.");
-    return json(request, { ok: true, type: "video", intent, reply: "Here is your generated video.", videoUrl });
+    if (!isAdminUser(env,user)) await decrementVideoCredit(env,user.id);
+    await storeMessage(env,user.id,"assistant","video",JSON.stringify({
+      videoId:generated.videoId,duration:generated.duration,provider:"NVIDIA Cosmos3 Nano"
+    }));
+    return json(request,{ok:true,type:"video",intent,reply:"Your NVIDIA Cosmos video is ready.",
+      videoUrl:generated.url,videoId:generated.videoId,duration:generated.duration});
   }
   let answer, sources = [];
   const content = file ? await convertFile(env, file) : "";
@@ -835,6 +844,28 @@ export default {
 
       if (request.method === "POST" && path === "/api/payments/webhook") return await handleWebhook(request, env);
 
+      if (request.method === "GET" && path.startsWith("/api/generated-video/")) {
+        const bits=path.slice("/api/generated-video/".length).split("/");
+        if(bits.length!==2)return json(request,{ok:false,error:"Invalid video link."},404);
+        const [ownerId,videoId]=bits;
+        if(!await checkSignedVideo(request,env,ownerId,videoId))
+          return json(request,{ok:false,error:"Video link expired or invalid. Sign in and open the original conversation to renew it."},403);
+        const key="generated/"+ownerId+"/"+videoId+".mp4";
+        const obj=await env.FILES.get(key);
+        if(!obj)return json(request,{ok:false,error:"Video file was not found."},404);
+        return new Response(obj.body,{status:200,headers:{...cors(request),
+          "Content-Type":"video/mp4","Content-Disposition":'inline; filename="NibrasGPT-Video.mp4"',
+          "Cache-Control":"private, max-age=1800","Content-Length":String(obj.size)}});
+      }
+      if (request.method === "POST" && path === "/api/video/link") {
+        const access=await requireUser(request,env);if(access.error)return access.error;
+        const body=await request.json().catch(()=>({}));
+        const videoId=String(body.videoId||"");
+        if(!/^[a-f0-9-]{36}$/i.test(videoId))return json(request,{ok:false,error:"Invalid video identifier."},400);
+        const obj=await env.FILES.head("generated/"+access.user.id+"/"+videoId+".mp4");
+        if(!obj)return json(request,{ok:false,error:"This video is no longer available."},404);
+        return json(request,{ok:true,url:await videoUrl(request,env,access.user.id,videoId)});
+      }
       if (request.method === "GET" && path.startsWith("/api/public-file/")) {
         const key = decodeURIComponent(path.slice("/api/public-file/".length)); const obj = await env.FILES.get(key);
         if (!obj) return new Response("Not found", { status: 404 });
@@ -848,7 +879,7 @@ export default {
         return json(request, { ok: coreOk, version: "6.0", checks, payment_mode: String(env.MYFATOORAH_MODE || "test") }, coreOk ? 200 : 500);
       }
       if (request.method === "GET" && path === "/api/config") {
-        return json(request, { ok: true, version: "6.1", web_search_enabled: !!env.TAVILY_API_KEY, search_modes: ["light","medium","deep"], nemotron_enabled: !!env.NVIDIA_API_KEY, google_enabled: !!env.GOOGLE_CLIENT_ID, google_client_id: env.GOOGLE_CLIENT_ID || "", payments_enabled: !!env.MYFATOORAH_API_KEY, payment_provider: "MyFatoorah", payment_mode: String(env.MYFATOORAH_MODE || "test"), plans: Object.entries(PLAN_PRICES).map(([id,p]) => ({ id, label: planLabel(id), kwd: p.kwd, usd: p.usd })) });
+        return json(request, { ok: true, version: "6.2", cosmos_video_enabled: !!env.NVIDIA_COSMOS_API_KEY, video_durations:[5,10], web_search_enabled: !!env.TAVILY_API_KEY, search_modes: ["light","medium","deep"], nemotron_enabled: !!env.NVIDIA_API_KEY, google_enabled: !!env.GOOGLE_CLIENT_ID, google_client_id: env.GOOGLE_CLIENT_ID || "", payments_enabled: !!env.MYFATOORAH_API_KEY, payment_provider: "MyFatoorah", payment_mode: String(env.MYFATOORAH_MODE || "test"), plans: Object.entries(PLAN_PRICES).map(([id,p]) => ({ id, label: planLabel(id), kwd: p.kwd, usd: p.usd })) });
       }
       if (request.method === "GET" && path === "/") return json(request, { ok: true, name: "NibrasGPT", version: "6.0", features: ["email-auth","google-auth","admin-dashboard","user-controls","myfatoorah-payments","auto-plan-activation","server-usage","chat","image","documents","website","app","code","cad","text-video","image-video","pwa"] });
 
