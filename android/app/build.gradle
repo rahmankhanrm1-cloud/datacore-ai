@@ -9,8 +9,8 @@ android {
         applicationId 'com.datacore.nibrasgpt'
         minSdk 26
         targetSdk 34
-        versionCode 2
-        versionName '1.1-native-google-test'
+        versionCode 3
+        versionName '1.2-superapp-preview'
     }
 
     compileOptions {
@@ -20,7 +20,18 @@ android {
 }
 
 dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'androidx.credentials:credentials:1.5.0'
     implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
     implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
 }
+
+ // Bundle the reviewed branch UI for real Android preview, without publishing Pages.
+ def webAssets = tasks.register('bundleWebAssets', Sync) {
+    from(rootProject.projectDir.parentFile) {
+        include 'index.html', 'flow.html', 'icon-192.webp', 'manifest.webmanifest', 'icon-512.webp'
+    }
+    into(layout.buildDirectory.dir('generated/nibrasAssets'))
+ }
+ android.sourceSets.main.assets.srcDir(layout.buildDirectory.dir('generated/nibrasAssets'))
+ tasks.named('preBuild').configure { dependsOn(webAssets) }
