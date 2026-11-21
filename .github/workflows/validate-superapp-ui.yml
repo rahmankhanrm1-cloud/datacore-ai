@@ -58,3 +58,11 @@ jobs:
           assert (root/'generated.pdf').read_bytes().endswith(b'%%EOF')
           print('PDF bytes verified')
           PY
+
+      - name: Package office export examples for format verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: NibrasGPT-Office-Export-Test-Files
+          path: /tmp/nibras-office-exports/*
+          retention-days: 7
+          if-no-files-found: error
