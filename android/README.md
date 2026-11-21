@@ -1,17 +1,12 @@
-# NibrasGPT Android test APK
+# NibrasGPT Android Super App preview
 
-This Android project wraps the existing NibrasGPT web application at https://rahmankhanrm1-cloud.github.io/datacore-ai/ in a WebView with HTTPS-only navigation, file selection, external links, and Android downloads.
+This APK bundles the reviewed PR #6 UI and AI Flow Studio. It uses HTTPS to connect to the existing NibrasGPT API. No changes to production accounts, D1, R2, credentials or billing are required to build it.
 
-## Build
-Run `gradle -p android :app:assembleDebug` with Android SDK API 35, JDK 17 and Gradle 8.10.2. The automated workflow uploads an installable **debug test APK**, with a temporary build/debug signing certificate.
-
-## Limitations
-- **Internet required:** web content is not bundled. This build does not promise offline operation.
-- Google Identity Services can restrict login from embedded Android WebView. Email/password login should be used for this test if Google sign-in is denied; implementing compliant external-browser Google auth requires separate app/server work.
-- Browser-specific features (e.g. JavaScript blob-file downloads or native APIs) may require dedicated bridges and additional testing.
-- This is a **test APK**, not a Play Store release. Do not use its generated debug signing key for future upgrades. Production releases must have a securely stored, stable release signing key.
-- Existing GitHub Pages site, Worker, API credentials and production services are left unchanged.
-- The app does not embed or expose NVIDIA/Cloudflare secrets.
-
-## Native Google sign-in (test)
-Uses Android Credential Manager with the published Google WEB client ID, exchanges ID token on the existing authenticated Cloudflare Worker HTTPS endpoint, then applies the verified app session to the trusted WebView origin only. No Google password or private API key is stored in the APK. The Google OAuth Android app configuration may require registering package com.datacore.nibrasgpt and the signing certificate SHA-1 in Google Cloud. A new random debug signing key per CI run prevents straightforward upgrades: uninstall the previous debug APK before installing a differently signed test APK. This is not production-release signing.
+## Testing
+- Build with JDK 17, Gradle 8.10.2 and Android SDK API 35: `gradle -p android :app:assembleDebug`.
+- The APK's local HTTPS origin is isolated from the old web app's browser storage; sign in again to access the same server-side account and data. Existing browser storage is left untouched.
+- Native Google login uses the explicit Sign in with Google Credential Manager option, exchanges the Google ID token with the existing backend, and installs the verified session only inside the bundled app origin. The exact non-secret error class is displayed if Google sign-in fails.
+- The Android OAuth client needs the exact package `com.datacore.nibrasgpt` and APK signing SHA-1 registered in the Google project corresponding to the configured web client ID. The build workflow prints the certificate fingerprint. Do not expose a private signing key or API secret.
+- This is a debug-signed preview. For a final updateable release, use the existing release signing identity if available, or register a new stable signing key after owner approval. Do not uninstall an existing app to work around signature conflicts before confirming its local data is backed up.
+- Production still runs Worker v6.0. The bundled UI identifies this version mismatch and gates new search, video and Office export actions until the reviewed API is deployed. The new UI is a preview, not an assertion of live provider access.
+- No secret is bundled in the APK. No paid service is enabled by this build.
