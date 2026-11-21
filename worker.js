@@ -1,4 +1,5 @@
 import { notionReadOnly } from "./notion-read.js";
+import { buildOfficeDocument } from "./office-export.js";
 
 const CORS_BASE = {
   "Access-Control-Allow-Origin": "*",
@@ -908,6 +909,30 @@ export default {
       }
       if (request.method === "GET" && path === "/api/admin/dashboard") return await adminDashboard(request, env);
       if (request.method === "POST" && path === "/api/admin/user") return await adminUpdateUser(request, env);
+      if (request.method === "POST" && path === "/api/office/export") {
+        const access = await requireUser(request, env); if (access.error) return access.error;
+        const allowance = await checkLimit(env, access.user, "file");
+        if (!allowance.ok) return json(request, {ok:false,code:allowance.code,error:allowance.message},402);
+        let data;
+        try { data = await request.json(); } catch { return json(request,{ok:false,error:"Invalid export request."},400); }
+        if (!data || typeof data.text !== "string" || !data.text.trim())
+          return json(request,{ok:false,error:"Nothing to export. Generate or enter text first."},400);
+        if (data.text.length > 30000)
+          return json(request,{ok:false,error:"Export content exceeds the 30,000-character limit."},413);
+        try {
+          const built = buildOfficeDocument({format:data.format,text:data.text,title:data.title});
+          const filePeriod=(PLAN_LIMITS[access.user.plan]||PLAN_LIMITS.free).file.period;
+          await incrementUsage(env,access.user.id,"file",filePeriod);
+          return new Response(built.bytes,{
+            status:200,headers:{...cors(request),"Content-Type":built.contentType,
+              "Content-Disposition":'attachment; filename="'+built.filename+'"',
+              "Cache-Control":"private, no-store",
+              "Access-Control-Expose-Headers":"Content-Disposition"}
+          });
+        } catch (error) {
+          return json(request,{ok:false,error:String(error?.message||"File export failed.")},422);
+        }
+      }
       if (request.method === "POST" && path === "/api/ai") {
         const a = await requireUser(request, env); if (a.error) return a.error; return await handleAI(request, env, a.user);
       }
