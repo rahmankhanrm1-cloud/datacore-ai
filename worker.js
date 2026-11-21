@@ -854,7 +854,7 @@ export default {
         const obj=await env.FILES.get(key);
         if(!obj)return json(request,{ok:false,error:"Video file was not found."},404);
         return new Response(obj.body,{status:200,headers:{...cors(request),
-          "Content-Type":"video/mp4","Content-Disposition":'inline; filename="NibrasGPT-Video.mp4"',
+          "Content-Type":"video/mp4","Content-Disposition":new URL(request.url).searchParams.get("download")==="1"?'attachment; filename="NibrasGPT-Video.mp4"':'inline; filename="NibrasGPT-Video.mp4"',
           "Cache-Control":"private, max-age=1800","Content-Length":String(obj.size)}});
       }
       if (request.method === "POST" && path === "/api/video/link") {
