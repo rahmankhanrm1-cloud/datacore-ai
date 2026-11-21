@@ -266,7 +266,7 @@ function setupGoogle(){const wrap=document.getElementById("googleBtnWrap");if(!c
 async function handleGoogleCredential(resp){const err=document.getElementById("authError");err.textContent="";try{let d=await api("/api/auth/google",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({credential:resp.credential})});acceptAuth(d)}catch(e){err.textContent=e.message}}
 function acceptAuth(d){token=d.token;localStorage.setItem("datacore_v6_token",token);localStorage.removeItem("datacore_v5_token");user=d.user;hideModal("authModal");setUserUI();loadHistory();handlePaymentReturn()}
 async function me(){if(!token){user=null;setUserUI();showModal("authModal");return}try{let d=await api("/api/me",{headers:headers()});user=d.user;localStorage.setItem("datacore_v6_token",token);setUserUI();await loadHistory();await handlePaymentReturn()}catch{token="";localStorage.removeItem("datacore_v6_token");localStorage.removeItem("datacore_v5_token");user=null;setUserUI();showModal("authModal")}}
-async async function loadHistory(){
+async function loadHistory(){
   try {
     const data=await api("/api/history",{headers:headers()});
     history=await Promise.all((data.messages||[]).map(async message=>{
