@@ -7,6 +7,9 @@ on:
       - 'index.html'
       - 'worker.js'
       - 'office-export.js'
+      - 'cosmos-video.js'
+      - 'flow.html'
+      - 'tests/cosmos-video.test.mjs'
       - 'tests/office-export.test.mjs'
       - 'tests/superapp-ui.test.mjs'
       - '.github/workflows/validate-superapp-ui.yml'
@@ -15,6 +18,9 @@ on:
       - 'index.html'
       - 'worker.js'
       - 'office-export.js'
+      - 'cosmos-video.js'
+      - 'flow.html'
+      - 'tests/cosmos-video.test.mjs'
       - 'tests/office-export.test.mjs'
       - 'tests/superapp-ui.test.mjs'
       - '.github/workflows/validate-superapp-ui.yml'
@@ -33,6 +39,7 @@ jobs:
         run: |
           node tests/superapp-ui.test.mjs
           node tests/office-export.test.mjs
+          node tests/cosmos-video.test.mjs
       - name: Validate Office archives and XML (Python stdlib)
         run: |
           python3 - <<'PY'
