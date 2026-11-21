@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NibrasGPT — AI Flow Studio</title>
+<meta name="theme-color" content="#f7f7f4">
+<style>
+:root{--bg:#f7f7f4;--ink:#122d31;--muted:#66797a;--line:#dce4e2;--primary:#096366;--card:#fff}
+*{box-sizing:border-box}body{font:15px/1.5 system-ui,-apple-system,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+header{background:#fff;display:flex;align-items:center;gap:12px;padding:13px 18px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+header h1{font-size:20px;margin:0;letter-spacing:-.5px}header small{color:var(--muted)}
+a{color:var(--primary)}button,select,input,textarea{font:inherit}
+button{background:white;border:1px solid var(--line);border-radius:12px;padding:9px 12px;cursor:pointer;color:var(--ink);font-weight:600}
+button:hover{border-color:#68aeaa}button:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #249ea2}
+button.primary{background:var(--primary);color:white;border-color:var(--primary)}
+button:disabled{opacity:.45;cursor:progress}
+main{margin:0 auto;padding:12px 14px 25px;max-width:1500px}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin-bottom:12px}
+.bar .spacer{flex:1}.status{font-size:13px;color:#356064;padding:8px 12px;flex:1}
+.canvasScroll{overflow:auto;max-width:100%;background:radial-gradient(circle at 1px 1px,#e5eaea 1px,transparent 1.1px) 0 0 /24px 24px,#f6f8f7;border:1px solid var(--line);border-radius:20px;height:72vh;min-height:520px}
+#canvas{position:relative;width:max(100%,970px);height:790px}
+#links{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.node{position:absolute;width:270px;border:1px solid #d2ddda;background:#fff;border-radius:18px;box-shadow:0 8px 20px rgba(22,74,67,.09);z-index:2;overflow:hidden}
+.node.busy{outline:2px solid #2c9b98}
+.node.failed{outline:2px solid #da6c68}
+.node .handle{cursor:grab;padding:10px 12px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:7px;background:#fff}
+.node .handle:active{cursor:grabbing}
+.node .tag{font-size:11px;color:#206768;background:#e8f6f1;border-radius:9px;padding:3px 6px}
+.node .number{border-radius:8px;background:#f0f5f3;padding:2px 7px;color:#355f61;font-weight:700}
+.node .body{padding:10px 12px 13px}
+.node .body label{font-size:12px;color:var(--muted);display:block;margin:6px 0 2px}
+.node textarea{resize:vertical;width:100%;min-height:76px;border:1px solid var(--line);border-radius:10px;padding:9px;color:var(--ink)}
+.node select{width:100%;color:var(--ink);border:1px solid var(--line);border-radius:9px;background:#fff;padding:7px}
+.node .minirow{display:flex;gap:6px;justify-content:flex-end;margin-top:9px}
+.node .minirow button{font-size:11px;padding:5px 8px}
+.result{margin-top:9px;background:#f3f7f6;border-radius:10px;padding:7px 8px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;overflow:auto}
+.result img,.result video{width:100%;max-height:150px;object-fit:contain}
+.note{color:var(--muted);font-size:12px;padding:12px 4px}
+@media(max-width:650px){header{padding:10px}header h1{font-size:17px}main{padding:8px}.canvasScroll{height:72vh}.bar button{font-size:12px}.node{width:260px}}
+</style></head><body>
+<header><a href="./" aria-label="Back to NibrasGPT">← Chat</a><h1>🧩 NibrasGPT AI Flow Studio</h1><small>Connect prompts → AI → Photo / Video → Output</small></header>
+<main>
+ <div class="bar">
+  <button type="button" id="addPrompt">+ Prompt</button>
+  <button type="button" id="addChat">+ AI Chat</button>
+  <button type="button" id="addSearch">+ Web Search</button>
+  <button type="button" id="addImage">+ Photo</button>
+  <button type="button" id="addVideo">+ Video</button>
+  <button type="button" id="addOutput">+ Output</button>
+  <span class="spacer"></span>
+  <button type="button" id="save">Save Flow</button>
+  <button type="button" id="reset">Reset</button>
+  <button type="button" class="primary" id="run">▶ Run Flow</button>
+ </div>
+ <div class="status" id="status" role="status" aria-live="polite">Edit the Prompt node, then Run Flow. Sign in to NibrasGPT in the same browser first.</div>
+ <div class="canvasScroll"><div id="canvas"><svg id="links" aria-hidden="true"></svg></div></div>
+ <div class="note">Prototype: editable, movable nodes; connections shown by curved lines. Search requires a configured Search API. Photo and Video require available provider capacity and credits. Saving keeps prompt text in this device's browser storage; do not enter passwords or API keys.</div>
+</main>
+<script>
+"use strict";
+const API="https://datacore-ai-api.datacore-solutionswork.workers.dev";
+const KEY="nibrasgpt_visual_flow_v1";
+const canvas=document.getElementById("canvas"),svg=document.getElementById("links"),statusEl=document.getElementById("status"),runBtn=document.getElementById("run");
+const token=()=>localStorage.getItem("datacore_v6_token")||localStorage.getItem("datacore_v5_token")||"";
+const nameOf={prompt:"Prompt",chat:"AI Chat",search:"Web Search",image:"Photo",video:"Video",output:"Output"};
+let nodes=[],running=false;
+function initial(){
+ return [
+  {id:"n1",type:"prompt",x:30,y:210,input:null,text:"Describe an inspiring futuristic city in clear detail",level:"medium"},
+  {id:"n2",type:"chat",x:350,y:210,input:"n1",text:"Expand this idea with professional, specific details.",level:"light"},
+  {id:"n3",type:"output",x:680,y:210,input:"n2",text:"",level:"light"}
+ ];
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(nodes.map(({id,type,x,y,input,text,level})=>({id,type,x,y,input,text,level}))));statusEl.textContent="Saved on this device."}
+function restore(){
+ try{const raw=JSON.parse(localStorage.getItem(KEY)||"null");if(!Array.isArray(raw)||raw.length>30)return initial();
+ const found=new Set();const valid=[];
+ for(const n of raw){if(!n||!nameOf[n.type]||typeof n.id!=="string"||found.has(n.id))continue;
+  found.add(n.id);valid.push({id:n.id,type:n.type,x:Number(n.x)||20,y:Number(n.y)||20,input:typeof n.input==="string"?n.input:null,text:String(n.text||"").slice(0,5000),level:["light","medium","deep"].includes(n.level)?n.level:"light"});}
+ return valid.length?valid:initial();
+ }catch{return initial();}
+}
+function make(tag,props={},content=""){
+ const el=document.createElement(tag);
+ for(const [key,val] of Object.entries(props)){if(key==="className")el.className=val;else el.setAttribute(key,val);}
+ if(content)el.textContent=content;
+ return el;
+}
+function add(type){
+ if(nodes.length>=18){alert("Maximum 18 nodes per workflow.");return;}
+ const last=nodes[nodes.length-1],number=nodes.reduce((max,n)=>Math.max(max,Number(n.id.slice(1))||0),0)+1;
+ const id="n"+number;
+ const node={id,type,x:35+((nodes.length%3)*320),y:40+Math.floor(nodes.length/3)*255,input:last?.id||null,text:type==="prompt"?"Enter your prompt…":type==="chat"?"Process the previous node's output.":"",level:type==="search"?"medium":"light"};
+ nodes.push(node);save();render();scrollToNode(id);
+}
+function scrollToNode(id){const card=document.getElementById("card-"+id);if(card)card.scrollIntoView({block:"nearest",inline:"nearest",behavior:"smooth"});}
+function deleteNode(id){nodes=nodes.filter(n=>n.id!==id);for(const n of nodes)if(n.input===id)n.input=null;save();render();}
+function getSourceOptions(node,select){
+ const none=make("option",{value:""},"No connection");select.append(none);
+ for(const other of nodes){if(other.id===node.id)continue;select.append(make("option",{value:other.id},other.id+" · "+nameOf[other.type]));}
+ select.value=node.input||"";
+}
+function drawLinks(){
+ svg.innerHTML="";
+ for(const n of nodes){const src=nodes.find(x=>x.id===n.input);if(!src)continue;
+  const startX=src.x+268,startY=src.y+58,endX=n.x,endY=n.y+58,curve=Math.max(60,Math.abs(endX-startX)*.46);
+  const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+  path.setAttribute("d","M "+startX+" "+startY+" C "+(startX+curve)+" "+startY+", "+(endX-curve)+" "+endY+", "+endX+" "+endY);
+  path.setAttribute("stroke","#247a79");path.setAttribute("stroke-width","2.5");path.setAttribute("stroke-opacity",".75");path.setAttribute("fill","none");
+  svg.append(path);
+ }
+}
+function displayResult(card,node,value){
+ const target=card.querySelector(".result");if(!target)return;
+ target.textContent="";
+ if(!value)return;
+ const line=make("div",{},value.type==="image"?"Generated image":value.type==="video"?"Generated video":String(value.text||"").slice(0,1800));target.append(line);
+ if(value.type==="image"&&value.url){const img=make("img",{alt:"AI-generated result"});img.src=value.url;target.append(img);}
+ if(value.type==="video"&&value.url){const video=make("video",{controls:"",playsinline:""});video.src=value.url;target.append(video);}
+}
+function render(){
+ for(const card of canvas.querySelectorAll(".node"))card.remove();
+ nodes.forEach(n=>{
+  const card=make("article",{className:"node",id:"card-"+n.id,"data-node":n.id});
+  card.style.left=n.x+"px";card.style.top=n.y+"px";
+  const head=make("div",{className:"handle"});
+  head.append(make("span",{className:"number"},n.id),make("strong",{},nameOf[n.type]),make("span",{className:"tag"},"⋮⋮ drag"));
+  const body=make("div",{className:"body"});
+  if(n.type!=="prompt"){
+   body.append(make("label",{}, "Input from"));
+   const source=make("select",{"aria-label":"Input node for "+n.id});getSourceOptions(n,source);
+   source.onchange=()=>{n.input=source.value||null;save();drawLinks()};body.append(source);
+  }
+  if(!["output"].includes(n.type)){
+   body.append(make("label",{},n.type==="prompt"?"Prompt":n.type==="search"?"Question / extra search instructions":"Instruction"));
+   const ta=make("textarea",{"aria-label":"Prompt for "+n.id});ta.value=n.text;ta.oninput=()=>{n.text=ta.value.slice(0,5000);save()};body.append(ta);
+  }
+  if(n.type==="search"){
+   body.append(make("label",{},"Search depth"));const mode=make("select",{"aria-label":"Web search depth"});
+   for(const level of ["medium","deep"])mode.append(make("option",{value:level},level.toUpperCase()));
+   mode.value=n.level;mode.onchange=()=>{n.level=mode.value;save()};body.append(mode);
+  }
+  const result=make("div",{className:"result","aria-live":"polite"},"Not run yet");body.append(result);
+  const row=make("div",{className:"minirow"});
+  const remove=make("button",{type:"button","aria-label":"Remove "+n.id},"Remove");remove.onclick=()=>deleteNode(n.id);row.append(remove);
+  body.append(row);card.append(head,body);canvas.append(card);
+  startDrag(head,card,n);
+ });
+ drawLinks();
+}
+function startDrag(handle,card,n){
+ let state=null;
+ handle.addEventListener("pointerdown",e=>{
+  if(e.target.closest("button,select"))return;
+  e.preventDefault();state={x:e.clientX,y:e.clientY,left:n.x,top:n.y};
+  handle.setPointerCapture(e.pointerId);
+ });
+ handle.addEventListener("pointermove",e=>{
+  if(!state)return;
+  n.x=Math.max(5,Math.min(1650,state.left+e.clientX-state.x));
+  n.y=Math.max(5,Math.min(1650,state.top+e.clientY-state.y));
+  card.style.left=n.x+"px";card.style.top=n.y+"px";drawLinks();
+ });
+ const end=()=>{if(!state)return;state=null;save()};
+ handle.addEventListener("pointerup",end);handle.addEventListener("pointercancel",end);
+}
+function orderNodes(){
+ const map=new Map(nodes.map(n=>[n.id,n])),done=new Set(),active=new Set(),order=[];
+ const visit=id=>{
+  if(done.has(id))return;
+  if(active.has(id))throw new Error("A circular connection was found. Change the Input from selection.");
+  const n=map.get(id);if(!n)throw new Error("An input connection points to a deleted node.");
+  active.add(id);if(n.input)visit(n.input);active.delete(id);
+  done.add(id);order.push(n);
+ };
+ for(const n of nodes)visit(n.id);
+ return order;
+}
+async function requestAI(prompt,mode,searchMode,imageSource){
+ const fd=new FormData();fd.append("prompt",prompt);fd.append("mode",mode);fd.append("search_mode",searchMode);fd.append("model","default");
+ if(imageSource){const b=await (await fetch(imageSource)).blob();fd.append("file",new File([b],"flow-image.png",{type:"image/png"}));}
+ const response=await fetch(API+"/api/ai",{method:"POST",headers:{Authorization:"Bearer "+token()},body:fd});
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok||!data.ok)throw new Error(data.error||"AI provider failed.");
+ return {type:data.type==="image"?"image":data.type==="video"?"video":"text",text:String(data.reply||""),url:data.imageDataUrl||data.videoUrl||null};
+}
+async function run(){
+ if(running)return;
+ if(!token()){statusEl.textContent="Please sign in to NibrasGPT in the browser first, then reopen Flow Studio.";return;}
+ let sorted;try{sorted=orderNodes()}catch(e){statusEl.textContent=e.message;return;}
+ running=true;runBtn.disabled=true;const values=new Map();let errors=0;
+ try{
+  for(const n of sorted){
+   const card=document.getElementById("card-"+n.id);
+   if(card)card.classList.add("busy");
+   statusEl.textContent="Running "+n.id+" · "+nameOf[n.type]+"…";
+   const prev=n.input?values.get(n.input):null;
+   if(n.input&&!prev)throw new Error("Cannot run "+n.id+" because its input is missing.");
+   let output;
+   try{
+    const previous=(prev?.text||"").trim();
+    const prompt=[previous,n.text].filter(Boolean).join("\n\n").slice(0,7500);
+    if(n.type==="prompt")output={type:"text",text:n.text,url:null};
+    else if(n.type==="output")output=prev||{type:"text",text:"No input connected",url:null};
+    else if(n.type==="chat")output=await requestAI(prompt||"Continue", "auto","light");
+    else if(n.type==="search")output=await requestAI(prompt||"Research the preceding question","auto",n.level);
+    else if(n.type==="image")output=await requestAI(prompt||"Generate an image","photo","light");
+    else if(n.type==="video")output=await requestAI(prompt||"Generate a video","video","light",prev?.type==="image"?prev.url:null);
+    values.set(n.id,output);if(card)displayResult(card,n,output);
+   }catch(e){
+    errors++;
+    if(card){card.classList.add("failed");card.querySelector(".result").textContent="Error: "+e.message;}
+    throw new Error(n.id+": "+e.message);
+   }finally{if(card)card.classList.remove("busy");}
+  }
+  statusEl.textContent="Flow finished successfully. "+sorted.length+" nodes executed.";
+ }catch(e){statusEl.textContent="Flow stopped: "+e.message;}
+ finally{running=false;runBtn.disabled=false;}
+}
+for(const type of ["Prompt","Chat","Search","Image","Video","Output"]){
+ document.getElementById("add"+type).onclick=()=>add(type.toLowerCase());
+}
+document.getElementById("save").onclick=save;
+document.getElementById("reset").onclick=()=>{if(!confirm("Reset saved flow to the starter template?"))return;nodes=initial();save();render()};
+document.getElementById("run").onclick=run;
+nodes=restore();render();
+</script></body></html>

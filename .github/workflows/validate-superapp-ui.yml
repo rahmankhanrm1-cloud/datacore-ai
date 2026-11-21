@@ -1,0 +1,100 @@
+name: Validate NibrasGPT Super App UI
+on:
+  push:
+    branches:
+      - feature/unified-prompt-router-20261120
+    paths:
+      - 'index.html'
+      - 'worker.js'
+      - 'office-export.js'
+      - 'cosmos-video.js'
+      - 'flow.html'
+      - 'tests/cosmos-video.test.mjs'
+      - 'tests/office-export.test.mjs'
+      - 'tests/superapp-ui.test.mjs'
+      - '.github/workflows/validate-superapp-ui.yml'
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'worker.js'
+      - 'office-export.js'
+      - 'cosmos-video.js'
+      - 'flow.html'
+      - 'tests/cosmos-video.test.mjs'
+      - 'tests/office-export.test.mjs'
+      - 'tests/superapp-ui.test.mjs'
+      - '.github/workflows/validate-superapp-ui.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run offline tests (no API charges)
+        run: |
+          node tests/superapp-ui.test.mjs
+          node tests/office-export.test.mjs
+          node tests/cosmos-video.test.mjs
+      - name: Wrangler dry-run build (never deploy)
+        run: |
+          npx --yes wrangler@4 deploy --dry-run --config wrangler.jsonc --outdir /tmp/nibras-worker-dryrun
+      - name: Validate Office archives and XML (Python stdlib)
+        run: |
+          python3 - <<'PY'
+          from zipfile import ZipFile
+          from pathlib import Path
+          from xml.etree import ElementTree
+          root=Path('/tmp/nibras-office-exports')
+          for suffix in ('docx','xlsx','pptx'):
+              p=root/('generated.'+suffix)
+              with ZipFile(p) as z:
+                  assert z.testzip() is None
+                  for name in z.namelist():
+                      if name.endswith('.xml') or name.endswith('.rels'):
+                          ElementTree.fromstring(z.read(name))
+                  print(suffix,'OK:',len(z.namelist()),'archive parts')
+          assert (root/'generated.pdf').read_bytes().endswith(b'%%EOF')
+          print('PDF bytes verified')
+          PY
+
+      - name: Package office export examples for format verification
+        uses: actions/upload-artifact@v4
+        with:
+          name: NibrasGPT-Office-Export-Test-Files
+          path: /tmp/nibras-office-exports/*
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Render mobile UI visual smoke screenshots
+        run: |
+          CHROME=$(command -v google-chrome || command -v chromium || true)
+          if [ -z "$CHROME" ]; then
+            echo "No Chrome binary; JavaScript parsing and Office format validation already passed"
+            exit 0
+          fi
+          mkdir -p /tmp/nibras-ui-shots /tmp/nibras-ui-static
+          cp icon-192.webp /tmp/nibras-ui-static/
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('index.html').read_text()
+          source=source.replace('<script src="https://accounts.google.com/gsi/client" async defer></script>','')
+          source=source.replace('(async()=>{render();setUserUI();await loadConfig();await me()})();','(async()=>{render();setUserUI();})();')
+          Path('/tmp/nibras-ui-static/index.html').write_text(source)
+          Path('/tmp/nibras-ui-static/flow.html').write_text(Path('flow.html').read_text())
+          PY
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=412,915 --force-device-scale-factor=1 --virtual-time-budget=1500 --screenshot=/tmp/nibras-ui-shots/01-mobile-chat.png file:///tmp/nibras-ui-static/index.html || true
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --window-size=1080,820 --force-device-scale-factor=1 --virtual-time-budget=1500 --screenshot=/tmp/nibras-ui-shots/02-ai-flow.png file:///tmp/nibras-ui-static/flow.html || true
+          ls -lah /tmp/nibras-ui-shots/
+      - name: Save interface screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NibrasGPT-New-Interface-Screenshots
+          path: /tmp/nibras-ui-shots/*.png
+          retention-days: 7
+          if-no-files-found: warn
