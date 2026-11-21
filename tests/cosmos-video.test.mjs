@@ -42,4 +42,6 @@ assert.equal(sent.model_mode,"image2video");
 assert.ok(sent.input_reference.startsWith("data:image/jpeg;base64,"));
 assert.equal(sent.num_frames,121);
 assert.ok(photoResult.url.startsWith("https://test.example.com/api/generated-video/"));
+globalThis.fetch=async (_url,opts)=>{assert.equal(opts.redirect,"manual");return new Response("not found",{status:404});};
+await assert.rejects(generateCosmosVideo(req,env,user,{prompt:"A paper boat",duration:5}),error=>error.code==="COSMOS_ENDPOINT_UNAVAILABLE");
 console.log("Cosmos video API mock, image payload, MP4 validation and HMAC link verification: PASS");
