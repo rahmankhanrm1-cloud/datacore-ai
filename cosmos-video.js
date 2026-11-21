@@ -63,10 +63,12 @@ export async function generateCosmosVideo(request,env,user,{prompt,file=null,dur
  let response;
  try{response=await fetch(API,{method:"POST",
   headers:{Authorization:"Bearer "+key,"Content-Type":"application/json",Accept:"application/json"},
-  body:JSON.stringify(body),signal:controller.signal,redirect:"error"});
+  body:JSON.stringify(body),signal:controller.signal,redirect:"manual"});
  }catch{
   throw videoError("NVIDIA Cosmos Video is unavailable or processing timed out. No video credits were deducted.","VIDEO_PROVIDER_UNAVAILABLE");
  }finally{clearTimeout(timeout);}
+ if(response.status===404)throw videoError("NVIDIA Cosmos hosted endpoint returned HTTP 404. Its public preview API is unavailable for this request; your saved key has not been changed.","COSMOS_ENDPOINT_UNAVAILABLE");
+ if(response.status>=300&&response.status<400)throw videoError("NVIDIA Cosmos returned an unexpected redirect. No credentials were forwarded.","VIDEO_PROVIDER_UNAVAILABLE");
  if(response.status===401||response.status===403)throw videoError("NVIDIA Cosmos key is invalid, revoked or lacks permission.","COSMOS_AUTH_FAILED");
  if(response.status===429)throw videoError("NVIDIA Cosmos API quota has been reached. Retry after provider quota resets.","COSMOS_QUOTA_REACHED");
  if(response.status===402)throw videoError("NVIDIA Cosmos provider requires credits. No paid service was activated.","COSMOS_BILLING_REQUIRED");
