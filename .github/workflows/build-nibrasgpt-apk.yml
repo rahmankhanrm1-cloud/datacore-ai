@@ -33,7 +33,13 @@ jobs:
           cp android/app/build/outputs/apk/debug/app-debug.apk output/NibrasGPT-Android-native-google-test.apk
           sha256sum output/NibrasGPT-Android-native-google-test.apk
           echo "Debug certificate SHA1 for Google OAuth Android app registration:"
-          keytool -list -v -keystore "$HOME/.android/debug.keystore" -alias androiddebugkey -storepass android -keypass android | grep -E "SHA1:|SHA256:"
+          unzip -t -qq output/NibrasGPT-Android-native-google-test.apk
+          APKSIGNER=$(find "${ANDROID_HOME:-/opt/android-sdk}/build-tools" -type f -name apksigner 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$APKSIGNER" ]; then
+            "$APKSIGNER" verify --print-certs output/NibrasGPT-Android-native-google-test.apk | grep -E "(SHA-1|SHA-256)" || true
+          else
+            echo "Signing certificate details unavailable; APK build is still valid"
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: NibrasGPT-Android-native-google-test-APK
