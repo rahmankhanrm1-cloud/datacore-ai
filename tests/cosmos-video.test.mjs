@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
-import {webcrypto} from "node:crypto";
 import {generateCosmosVideo,checkSignedVideo,videoUrl} from "../cosmos-video.js";
 
-globalThis.crypto=webcrypto;
 const user={id:"11111111-1111-4111-a111-111111111111"};
 const env={ADMIN_KEY:"test-signing-secret-that-is-long-and-safe",FILES:{
   put:async (name,bytes)=>{env.savedName=name;env.savedBytes=bytes},
