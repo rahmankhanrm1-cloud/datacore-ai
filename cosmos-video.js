@@ -55,7 +55,8 @@ export async function generateCosmosVideo(request,env,user,{prompt,file=null,dur
   if(!acceptedImages.has(mime)||file.size>8*1024*1024)throw videoError("Photo to Video supports JPG, PNG, WebP up to 8 MB.", "VIDEO_IMAGE_UNSUPPORTED");
   const binary=new Uint8Array(await file.arrayBuffer());
   if(!binary.length)throw videoError("The uploaded image is empty.","VIDEO_IMAGE_UNSUPPORTED");
-  body.input_reference="data:"+mime+";base64,"+base64url(binary).replace(/-/g,"+").replace(/_/g,"/");
+  let input64="";for(let i=0;i<binary.length;i+=32768)input64+=String.fromCharCode(...binary.subarray(i,i+32768));
+  body.input_reference="data:"+mime+";base64,"+btoa(input64);
  }
  const controller=new AbortController();
  const timeout=setTimeout(()=>controller.abort(),110000);
