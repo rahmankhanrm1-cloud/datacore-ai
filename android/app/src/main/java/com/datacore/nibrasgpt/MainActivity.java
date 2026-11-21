@@ -18,7 +18,9 @@ import androidx.credentials.CustomCredential;
 import androidx.credentials.GetCredentialRequest;
 import androidx.credentials.GetCredentialResponse;
 import androidx.credentials.exceptions.GetCredentialException;
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption;
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
+import androidx.webkit.WebViewAssetLoader;
+import android.webkit.WebResourceResponse;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 import org.json.JSONObject;
 import javax.net.ssl.HttpsURLConnection;
@@ -45,7 +47,7 @@ import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
-    private static final String HOME = "https://rahmankhanrm1-cloud.github.io/datacore-ai/";
+    private static final String HOME = "https://appassets.androidplatform.net/assets/index.html";
     private static final int FILE_REQUEST = 4370;
     private static final String API_AUTH="https://datacore-ai-api.datacore-solutionswork.workers.dev/api/auth/google";
     private static final String GOOGLE_WEB_CLIENT="1021980839676-1ors7bt5kd27il5cs7c9q56725ikd91t.apps.googleusercontent.com";
@@ -96,7 +98,13 @@ public class MainActivity extends Activity {
         }
         CookieManager.getInstance().setAcceptCookie(true);
 
+        final WebViewAssetLoader assets = new WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+            .build();
         webView.setWebViewClient(new WebViewClient() {
+            @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return assets.shouldInterceptRequest(request.getUrl());
+            }
             @Override public void onPageFinished(WebView view, String url) {
                 if (!isTrusted(Uri.parse(url))) return;
                 view.evaluateJavascript("(function(){if(document.getElementById('nibras-hide-google'))return;var style=document.createElement('style');style.id='nibras-hide-google';style.textContent='#googleBtnWrap{display:none!important}';document.head.appendChild(style);})();",null);
@@ -187,10 +195,7 @@ public class MainActivity extends Activity {
 
     private void signInWithGoogle() {
         nativeGoogleButton.setEnabled(false);
-        final GetGoogleIdOption option = new GetGoogleIdOption.Builder()
-            .setServerClientId(GOOGLE_WEB_CLIENT)
-            .setFilterByAuthorizedAccounts(false)
-            .setAutoSelectEnabled(false)
+        final GetSignInWithGoogleOption option = new GetSignInWithGoogleOption.Builder(GOOGLE_WEB_CLIENT)
             .build();
         final GetCredentialRequest request=new GetCredentialRequest.Builder()
             .addCredentialOption(option).build();
@@ -209,7 +214,7 @@ public class MainActivity extends Activity {
                     } catch(Exception e) {authError("Google sign-in was not completed.");}
                 }
                 @Override public void onError(GetCredentialException e) {
-                    authError("Google sign-in unavailable. Check Google Play Services and the app's OAuth registration.");
+                    authError("Google sign-in unavailable (" + e.getClass().getSimpleName() + "). Check Google Play Services and Android OAuth package/SHA-1 registration.");
                 }
             });
     }
@@ -218,6 +223,7 @@ public class MainActivity extends Activity {
             HttpsURLConnection connection=null;
             try {
                 connection=(HttpsURLConnection)new URL(API_AUTH).openConnection();
+                connection.setInstanceFollowRedirects(false);
                 connection.setRequestMethod("POST");
                 connection.setConnectTimeout(12000);
                 connection.setReadTimeout(16000);
@@ -238,7 +244,7 @@ public class MainActivity extends Activity {
                 if(session.length()<20)throw new IllegalStateException("Invalid session");
                 runOnUiThread(() -> {
                     pendingSessionToken=session;
-                    nativeGoogleButton.setText("Google connected ✓");
+                    nativeGoogleButton.setText("Sign in with Google");
                     nativeGoogleButton.setEnabled(true);
                     installNativeSession();
                 });
@@ -251,7 +257,7 @@ public class MainActivity extends Activity {
         if(!isTrusted(Uri.parse(webView.getUrl())))return;
         final String token=pendingSessionToken;
         pendingSessionToken=null;
-        String js="(function(){localStorage.setItem('datacore_v6_token',"+JSONObject.quote(token)+");window.location.reload();})();";
+        String js="(function(){if(location.origin !== 'https://appassets.androidplatform.net' || !location.pathname.startsWith('/assets/'))return;localStorage.setItem('datacore_v6_token',"+JSONObject.quote(token)+");window.location.reload();})();";
         webView.evaluateJavascript(js,null);
     }
     private void authError(final String message) {
@@ -263,9 +269,9 @@ public class MainActivity extends Activity {
 
     private boolean isTrusted(Uri uri) {
         if (!"https".equalsIgnoreCase(uri.getScheme())) return false;
-        if (!"rahmankhanrm1-cloud.github.io".equalsIgnoreCase(uri.getHost())) return false;
+        if (!"appassets.androidplatform.net".equalsIgnoreCase(uri.getHost())) return false;
         String path = uri.getPath();
-        return path != null && (path.equals("/datacore-ai") || path.startsWith("/datacore-ai/"));
+        return path != null && path.startsWith("/assets/");
     }
 
     private void openOutside(Uri uri) {
