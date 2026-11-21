@@ -58,6 +58,8 @@ html,body{background:var(--bg);color:var(--text)}
 .searchStatus{font-size:11px;color:#586f72;padding:6px 9px 0;min-height:20px}
 .featureSheet{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .featureSheet[hidden]{display:none!important}
+.videoDuration{display:inline-flex;gap:8px;align-items:center;color:#386060;padding:7px 10px;background:#edf6f3;border-radius:10px;font-size:12px}
+.videoDuration select{color:#234449;background:#fff;padding:5px 7px;border-radius:8px;border:1px solid #ccd7d3}
 .toolPicker{display:flex;align-items:center;gap:6px;font-size:12px;color:#234449;background:#f0f5f4;padding:5px 9px;border-radius:12px}
 .toolPicker #createMode{width:auto;max-width:none;min-width:90px;color:#234449}
 .attachment{background:#f6f8f8;color:#192f32}
@@ -124,6 +126,7 @@ html,body{background:var(--bg);color:var(--text)}
     <button class="chip" data-create-mode="auto">💬 Chat & AI Tools</button>
     <button class="chip" data-create-mode="photo">🎨 Generate / Edit Photo</button>
     <button class="chip" data-create-mode="video">🎬 Text / Photo to Video</button>
+    <label class="videoDuration">Video duration <select id="videoDuration"><option value="5">5 seconds</option><option value="10">10 seconds</option><option value="30" disabled>30 sec — requires long-video backend</option></select></label>
     <button class="chip" data-prompt="Draft the text and structure for a professional Word document based on my next instructions">📄 Document Draft</button>
     <button class="chip" data-prompt="Help me build an app and provide its complete source code">📱 App Source</button>
     <button class="chip" data-prompt="Write and explain the complete code for: ">💻 Coding</button>
@@ -221,7 +224,7 @@ function fmtDate(ms){if(!ms)return "—";try{return new Date(Number(ms)).toLocal
 function md(t){let x=esc(t||""),blocks=[];x=x.replace(/```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g,(_,lang,c)=>{let k="@@C"+blocks.length+"@@";blocks.push(`<pre data-lang="${lang}"><code>${c.trim()}</code></pre>`);return k});let out="",ul=false,ol=false;const close=()=>{if(ul){out+="</ul>";ul=false}if(ol){out+="</ol>";ol=false}};for(let raw of x.split(/\r?\n/)){let l=raw.trimEnd();if(/^@@C\d+@@$/.test(l.trim())){close();out+=l.trim();continue}if(!l.trim()){close();continue}l=l.replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/`([^`]+)`/g,"<code>$1</code>");if(/^###\s+/.test(l)){close();out+="<h3>"+l.replace(/^###\s+/,"")+"</h3>"}else if(/^##\s+/.test(l)){close();out+="<h2>"+l.replace(/^##\s+/,"")+"</h2>"}else if(/^#\s+/.test(l)){close();out+="<h1>"+l.replace(/^#\s+/,"")+"</h1>"}else if(/^[-*]\s+/.test(l)){if(ol){out+="</ol>";ol=false}if(!ul){out+="<ul>";ul=true}out+="<li>"+l.replace(/^[-*]\s+/,"")+"</li>"}else if(/^\d+\.\s+/.test(l)){if(ul){out+="</ul>";ul=false}if(!ol){out+="<ol>";ol=true}out+="<li>"+l.replace(/^\d+\.\s+/,"")+"</li>"}else{close();out+="<p>"+l+"</p>"}}close();blocks.forEach((b,i)=>out=out.replace("@@C"+i+"@@",b));return out}
 function btn(label,fn){let b=document.createElement("button");b.className="mini";b.textContent=label;b.onclick=fn;return b}
 function render(){messages.innerHTML="";welcome.style.display=history.length?"none":"block";history.forEach(renderMessage)}
-function renderMessage(m){let row=document.createElement("div");row.className="msg "+m.role;if(m.role==="assistant"){let a=document.createElement("div");a.className="avatar";a.textContent="AI";row.appendChild(a)}let w=document.createElement("div");w.className="wrap";if(m.kind==="image"&&m.url){let c=document.createElement("div");c.className="bubble imagecard";c.innerHTML=`<p>${esc(m.content||"Image result")}</p><img src="${m.url}">`;w.appendChild(c);let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Download",()=>downloadUrl(m.url,"datacore-ai-image.jpg")));ac.appendChild(btn("Edit this image",()=>attachGeneratedImage(m.url)));w.appendChild(ac)}else if(m.kind==="video"&&m.url){let c=document.createElement("div");c.className="bubble videocard";c.innerHTML=`<p>${esc(m.content||"Video result")}</p><video controls playsinline src="${esc(m.url)}"></video>`;w.appendChild(c);let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Open video",()=>window.open(m.url,"_blank")));w.appendChild(ac)}else{let b=document.createElement("div");b.className="bubble";b.innerHTML=m.role==="assistant"?md(m.content):esc(m.content).replace(/\n/g,"<br>");w.appendChild(b);if(m.role==="assistant"&&Array.isArray(m.sources)&&m.sources.length){let sources=document.createElement("div");sources.className="sources-list";for(let i=0;i<m.sources.length;i++){const source=m.sources[i];try{let u=new URL(source.url);if(u.protocol!=="https:")continue;let a=document.createElement("a");a.href=u.href;a.target="_blank";a.rel="noopener noreferrer";a.textContent="[ "+(i+1)+" ] "+String(source.title||u.hostname).slice(0,90);sources.appendChild(a)}catch{}}w.appendChild(sources)}if(m.role==="assistant"&&m.content!=="Working…"){let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Copy",()=>navigator.clipboard.writeText(m.content||"")));ac.appendChild(btn("Download",()=>downloadText(m.content||"",m.artifact?.name||"datacore-ai-result.txt")));if(m.artifact?.kind==="website")ac.appendChild(btn("Save HTML",()=>saveCode(m.content,"index.html","html")));if(m.artifact?.kind==="cad")ac.appendChild(btn("Save CAD Script",()=>saveCode(m.content,"datacore-engineering.scr","scr")));
+function renderMessage(m){let row=document.createElement("div");row.className="msg "+m.role;if(m.role==="assistant"){let a=document.createElement("div");a.className="avatar";a.textContent="AI";row.appendChild(a)}let w=document.createElement("div");w.className="wrap";if(m.kind==="image"&&m.url){let c=document.createElement("div");c.className="bubble imagecard";c.innerHTML=`<p>${esc(m.content||"Image result")}</p><img src="${m.url}">`;w.appendChild(c);let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Download",()=>downloadUrl(m.url,"datacore-ai-image.jpg")));ac.appendChild(btn("Edit this image",()=>attachGeneratedImage(m.url)));w.appendChild(ac)}else if(m.kind==="video"&&m.url){let c=document.createElement("div");c.className="bubble videocard";c.innerHTML=`<p>${esc(m.content||"Video result")}</p><video controls playsinline src="${esc(m.url)}"></video>`;w.appendChild(c);let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Open video",()=>window.open(m.url,"_blank")));ac.appendChild(btn("Download MP4",()=>window.open(m.url+(m.url.includes("?")?"&":"?")+"download=1","_blank")));w.appendChild(ac)}else{let b=document.createElement("div");b.className="bubble";b.innerHTML=m.role==="assistant"?md(m.content):esc(m.content).replace(/\n/g,"<br>");w.appendChild(b);if(m.role==="assistant"&&Array.isArray(m.sources)&&m.sources.length){let sources=document.createElement("div");sources.className="sources-list";for(let i=0;i<m.sources.length;i++){const source=m.sources[i];try{let u=new URL(source.url);if(u.protocol!=="https:")continue;let a=document.createElement("a");a.href=u.href;a.target="_blank";a.rel="noopener noreferrer";a.textContent="[ "+(i+1)+" ] "+String(source.title||u.hostname).slice(0,90);sources.appendChild(a)}catch{}}w.appendChild(sources)}if(m.role==="assistant"&&m.content!=="Working…"){let ac=document.createElement("div");ac.className="actions";ac.appendChild(btn("Copy",()=>navigator.clipboard.writeText(m.content||"")));ac.appendChild(btn("Download",()=>downloadText(m.content||"",m.artifact?.name||"datacore-ai-result.txt")));if(m.artifact?.kind==="website")ac.appendChild(btn("Save HTML",()=>saveCode(m.content,"index.html","html")));if(m.artifact?.kind==="cad")ac.appendChild(btn("Save CAD Script",()=>saveCode(m.content,"datacore-engineering.scr","scr")));
 let exportSelect=document.createElement("select");
 exportSelect.className="exportSelect";exportSelect.setAttribute("aria-label","Export format");
 for(const label of ["DOCX","XLSX","PPTX","PDF"]){const option=document.createElement("option");option.value=label.toLowerCase();option.textContent=label;exportSelect.appendChild(option)}
@@ -263,7 +266,21 @@ function setupGoogle(){const wrap=document.getElementById("googleBtnWrap");if(!c
 async function handleGoogleCredential(resp){const err=document.getElementById("authError");err.textContent="";try{let d=await api("/api/auth/google",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({credential:resp.credential})});acceptAuth(d)}catch(e){err.textContent=e.message}}
 function acceptAuth(d){token=d.token;localStorage.setItem("datacore_v6_token",token);localStorage.removeItem("datacore_v5_token");user=d.user;hideModal("authModal");setUserUI();loadHistory();handlePaymentReturn()}
 async function me(){if(!token){user=null;setUserUI();showModal("authModal");return}try{let d=await api("/api/me",{headers:headers()});user=d.user;localStorage.setItem("datacore_v6_token",token);setUserUI();await loadHistory();await handlePaymentReturn()}catch{token="";localStorage.removeItem("datacore_v6_token");localStorage.removeItem("datacore_v5_token");user=null;setUserUI();showModal("authModal")}}
-async function loadHistory(){try{let d=await api("/api/history",{headers:headers()});history=(d.messages||[]).map(x=>({role:x.role,kind:x.kind||"text",content:x.content}));render()}catch{}}
+async async function loadHistory(){
+  try {
+    const data=await api("/api/history",{headers:headers()});
+    history=await Promise.all((data.messages||[]).map(async message=>{
+      if(message.kind!=="video")return {role:message.role,kind:message.kind||"text",content:message.content};
+      try {
+        const saved=JSON.parse(message.content);
+        if(!saved.videoId)return {role:message.role,kind:"text",content:message.content};
+        const link=await api("/api/video/link",{method:"POST",headers:headers(true),body:JSON.stringify({videoId:saved.videoId})});
+        return {role:message.role,kind:"video",content:"NVIDIA Cosmos3 video ("+saved.duration+" sec)",url:link.url};
+      } catch(e){return {role:message.role,kind:"text",content:"Previous video: "+(e.message||"Link unavailable")};}
+    }));
+    render();
+  }catch{}
+}
 async function doAuth(){let email=document.getElementById("authEmail").value.trim(),password=document.getElementById("authPassword").value,err=document.getElementById("authError");err.textContent="";try{let d=await api(authMode==="signup"?"/api/signup":"/api/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});acceptAuth(d)}catch(e){err.textContent=e.message}}
 function clearAttachment(){attachedFile=null;fileInput.value="";document.getElementById("attachment").classList.remove("show");document.getElementById("thumb").src="";document.getElementById("thumb").style.display="none";document.getElementById("fileIcon").style.display="grid"}
 function showAttachment(file,url=null){attachedFile=file;document.getElementById("attachment").classList.add("show");document.getElementById("fileName").textContent=file.name;document.getElementById("fileMeta").textContent=Math.round(file.size/1024)+" KB";if(file.type.startsWith("image/")&&url){document.getElementById("thumb").src=url;document.getElementById("thumb").style.display="block";document.getElementById("fileIcon").style.display="none"}}
@@ -286,7 +303,7 @@ function updateSearchUI() {
     status.textContent = "Photo mode selected: enter a prompt or attach a photo to edit."; return;
   }
   if (document.getElementById("createMode")?.value === "video") {
-    status.textContent = "Video mode selected: enter a prompt or attach a photo. Provider access and quotas apply."; return;
+    status.textContent = config?.cosmos_video_enabled ? "Video mode: NVIDIA Cosmos3 Nano · 5/10 seconds · provider quotas apply." : "NVIDIA Cosmos Video is not connected: new API key required in Cloudflare Secrets."; return;
   }
   status.textContent = searchMode === "light" ? "Light: AI answer without live web search." :
     (config?.web_search_enabled
@@ -335,6 +352,7 @@ async function send() {
     fd.append("prompt", prompt);
     fd.append("mode", mode);
     fd.append("search_mode", useSearch);
+    fd.append("video_duration", document.getElementById("videoDuration").value);
     fd.append("model", document.getElementById("chatModel").value);
     if (file) fd.append("file", file, file.name);
     const d = await api("/api/ai", {method:"POST",headers:headers(),body:fd});
