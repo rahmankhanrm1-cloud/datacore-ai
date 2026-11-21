@@ -26,8 +26,9 @@ const sandbox = {
   fetch: async () => { throw new Error("Network disabled in tests"); }
 };
 vm.createContext(sandbox);
-const runnableWorker = worker.replace(/^import\s+\{\s*notionReadOnly\s*\}\s+from\s+"\.\/notion-read\.js";\s*/m, "const notionReadOnly = ()=>null;\n")
-  .replace(/^import\\s+\\{\\s*buildOfficeDocument\\s*\\}\\s+from\\s+"\\.\\/office-export\\.js";\\s*/m, "const buildOfficeDocument = ()=>null;\\n")
+const runnableWorker = worker
+  .replace(/^import\s+\{\s*notionReadOnly\s*\}\s+from\s+"\.\/notion-read\.js";\s*/m, "const notionReadOnly = ()=>null;\n")
+  .replace(/^import\s+\{\s*buildOfficeDocument\s*\}\s+from\s+"\.\/office-export\.js";\s*/m, "const buildOfficeDocument = ()=>null;\n")
   .replace("export default {", "globalThis.workerDefault = {");
 new vm.Script(runnableWorker, {filename:"worker.js"}).runInContext(sandbox);
 
