@@ -6,6 +6,9 @@ on:
       - feature/unified-prompt-router-20261120
     paths:
       - 'android/**'
+      - 'index.html'
+      - 'flow.html'
+      - 'icon-192.webp'
       - '.github/workflows/build-nibrasgpt-apk.yml'
   workflow_dispatch:
 
@@ -30,19 +33,21 @@ jobs:
       - name: Prepare APK
         run: |
           mkdir -p output
-          cp android/app/build/outputs/apk/debug/app-debug.apk output/NibrasGPT-Android-native-google-test.apk
-          sha256sum output/NibrasGPT-Android-native-google-test.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk output/NibrasGPT-Android-1.2-SuperApp-Preview.apk
+          sha256sum output/NibrasGPT-Android-1.2-SuperApp-Preview.apk
           echo "Debug certificate SHA1 for Google OAuth Android app registration:"
-          unzip -t -qq output/NibrasGPT-Android-native-google-test.apk
+          unzip -t -qq output/NibrasGPT-Android-1.2-SuperApp-Preview.apk
+          unzip -l output/NibrasGPT-Android-1.2-SuperApp-Preview.apk | grep -F assets/index.html
+          unzip -l output/NibrasGPT-Android-1.2-SuperApp-Preview.apk | grep -F assets/flow.html
           APKSIGNER=$(find "${ANDROID_HOME:-/opt/android-sdk}/build-tools" -type f -name apksigner 2>/dev/null | sort -V | tail -1 || true)
           if [ -n "$APKSIGNER" ]; then
-            "$APKSIGNER" verify --print-certs output/NibrasGPT-Android-native-google-test.apk | grep -E "(SHA-1|SHA-256)" || true
+            "$APKSIGNER" verify --print-certs output/NibrasGPT-Android-1.2-SuperApp-Preview.apk | grep -E "(SHA-1|SHA-256)" || true
           else
             echo "Signing certificate details unavailable; APK build is still valid"
           fi
       - uses: actions/upload-artifact@v4
         with:
-          name: NibrasGPT-Android-native-google-test-APK
-          path: output/NibrasGPT-Android-native-google-test.apk
+          name: NibrasGPT-Android-1.2-SuperApp-Preview
+          path: output/NibrasGPT-Android-1.2-SuperApp-Preview.apk
           if-no-files-found: error
           retention-days: 30
