@@ -6,12 +6,16 @@ on:
     paths:
       - 'index.html'
       - 'worker.js'
+      - 'office-export.js'
+      - 'tests/office-export.test.mjs'
       - 'tests/superapp-ui.test.mjs'
       - '.github/workflows/validate-superapp-ui.yml'
   pull_request:
     paths:
       - 'index.html'
       - 'worker.js'
+      - 'office-export.js'
+      - 'tests/office-export.test.mjs'
       - 'tests/superapp-ui.test.mjs'
       - '.github/workflows/validate-superapp-ui.yml'
 permissions:
@@ -26,4 +30,24 @@ jobs:
         with:
           node-version: '22'
       - name: Run offline tests (no API charges)
-        run: node tests/superapp-ui.test.mjs
+        run: |
+          node tests/superapp-ui.test.mjs
+          node tests/office-export.test.mjs
+      - name: Validate Office archives and XML (Python stdlib)
+        run: |
+          python3 - <<'PY'
+          from zipfile import ZipFile
+          from pathlib import Path
+          from xml.etree import ElementTree
+          root=Path('/tmp/nibras-office-exports')
+          for suffix in ('docx','xlsx','pptx'):
+              p=root/('generated.'+suffix)
+              with ZipFile(p) as z:
+                  assert z.testzip() is None
+                  for name in z.namelist():
+                      if name.endswith('.xml') or name.endswith('.rels'):
+                          ElementTree.fromstring(z.read(name))
+                  print(suffix,'OK:',len(z.namelist()),'archive parts')
+          assert (root/'generated.pdf').read_bytes().endswith(b'%%EOF')
+          print('PDF bytes verified')
+          PY
