@@ -40,6 +40,9 @@ jobs:
           node tests/superapp-ui.test.mjs
           node tests/office-export.test.mjs
           node tests/cosmos-video.test.mjs
+      - name: Wrangler dry-run build (never deploy)
+        run: |
+          npx --yes wrangler@4 deploy --dry-run --config wrangler.jsonc --outdir /tmp/nibras-worker-dryrun
       - name: Validate Office archives and XML (Python stdlib)
         run: |
           python3 - <<'PY'
