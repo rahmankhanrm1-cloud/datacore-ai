@@ -1,0 +1,26 @@
+plugins {
+    id 'com.android.application'
+}
+android {
+    namespace 'com.datacore.nibrasgpt'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.datacore.nibrasgpt'
+        minSdk 26
+        targetSdk 34
+        versionCode 2
+        versionName '1.1-native-google-test'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'androidx.credentials:credentials:1.5.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.5.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
+}
