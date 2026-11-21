@@ -18,6 +18,14 @@ assert.doesNotMatch(index, /createTextVideo\(prompt\)/, "Don't route video direc
 assert.doesNotMatch(index, /id="freeVideoBtn"/, "No public quota-limited GPU button");
 
 const scripts = [...index.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1].trim()).filter(Boolean);
+const flow = readFileSync("flow.html", "utf8");
+assert.match(flow, /function orderNodes\(/);
+assert.match(flow, /createElementNS\("http:\/\/www\.w3\.org\/2000\/svg"/);
+assert.match(flow, /async function run\(/);
+const flowScripts = [...flow.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1].trim()).filter(Boolean);
+assert.ok(flowScripts.length, "Flow Studio must contain working JavaScript");
+for(const script of flowScripts) new vm.Script(script, {filename:"flow.html"});
+
 assert.ok(scripts.length, "Inline application JavaScript must exist");
 for(const script of scripts) new vm.Script(script, {filename:"index.html"});
 
@@ -29,6 +37,7 @@ vm.createContext(sandbox);
 const runnableWorker = worker
   .replace(/^import\s+\{\s*notionReadOnly\s*\}\s+from\s+"\.\/notion-read\.js";\s*/m, "const notionReadOnly = ()=>null;\n")
   .replace(/^import\s+\{\s*buildOfficeDocument\s*\}\s+from\s+"\.\/office-export\.js";\s*/m, "const buildOfficeDocument = ()=>null;\n")
+  .replace(/^import\s+\{\s*generateCosmosVideo,videoUrl,checkSignedVideo\s*\}\s+from\s+"\.\/cosmos-video\.js";\s*/m, "const generateCosmosVideo = ()=>null; const videoUrl=()=>null;const checkSignedVideo=()=>false;\n")
   .replace("export default {", "globalThis.workerDefault = {");
 new vm.Script(runnableWorker, {filename:"worker.js"}).runInContext(sandbox);
 
