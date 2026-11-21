@@ -20,6 +20,10 @@ import androidx.credentials.GetCredentialResponse;
 import androidx.credentials.exceptions.GetCredentialException;
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption;
 import androidx.webkit.WebViewAssetLoader;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
+import java.util.Collections;
+import android.util.Base64;
 import android.webkit.WebResourceResponse;
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential;
 import org.json.JSONObject;
@@ -49,6 +53,8 @@ import java.nio.charset.StandardCharsets;
 public class MainActivity extends Activity {
     private static final String HOME = "https://appassets.androidplatform.net/assets/index.html";
     private static final int FILE_REQUEST = 4370;
+    private static final int SAVE_REQUEST = 4371;
+    private byte[] pendingDownload;
     private static final String API_AUTH="https://datacore-ai-api.datacore-solutionswork.workers.dev/api/auth/google";
     private static final String GOOGLE_WEB_CLIENT="1021980839676-1ors7bt5kd27il5cs7c9q56725ikd91t.apps.googleusercontent.com";
     private String pendingSessionToken = null;
@@ -97,6 +103,16 @@ public class MainActivity extends Activity {
             settings.setSafeBrowsingEnabled(true);
         }
         CookieManager.getInstance().setAcceptCookie(true);
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            WebViewCompat.addWebMessageListener(webView, "NibrasDownload",
+                Collections.singleton("https://appassets.androidplatform.net"),
+                (view, message, source, mainFrame, reply) -> {
+                    if (mainFrame && isTrusted(Uri.parse(view.getUrl())) &&
+                        "https://appassets.androidplatform.net".equals(source.toString())) {
+                        saveBlob(message.getData());
+                    }
+                });
+        }
 
         final WebViewAssetLoader assets = new WebViewAssetLoader.Builder()
             .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
@@ -284,8 +300,40 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void saveBlob(String message) {
+        if (pendingDownload != null || message == null || message.length() > 14000000) return;
+        try {
+            JSONObject payload = new JSONObject(message);
+            String name = payload.getString("name");
+            if (name.length() > 180 || name.contains("/") || name.contains("\\") || name.contains("\n")) throw new IllegalArgumentException();
+            byte[] data = Base64.decode(payload.getString("data"), Base64.DEFAULT);
+            if (data.length == 0 || data.length > 10000000) throw new IllegalArgumentException();
+            pendingDownload = data;
+            Intent save = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            save.addCategory(Intent.CATEGORY_OPENABLE);
+            save.setType(payload.optString("mime", "application/octet-stream"));
+            save.putExtra(Intent.EXTRA_TITLE, name);
+            startActivityForResult(save, SAVE_REQUEST);
+        } catch (Exception e) {
+            pendingDownload = null;
+            Toast.makeText(this, "Unable to prepare this download", Toast.LENGTH_LONG).show();
+        }
+    }
+
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (request == SAVE_REQUEST) {
+            byte[] bytes = pendingDownload;
+            pendingDownload = null;
+            if (result == RESULT_OK && data != null && data.getData() != null && bytes != null) {
+                try (OutputStream out = getContentResolver().openOutputStream(data.getData(), "w")) {
+                    if (out == null) throw new IllegalStateException();
+                    out.write(bytes);
+                    Toast.makeText(this, "File saved", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) { Toast.makeText(this, "File could not be saved", Toast.LENGTH_LONG).show(); }
+            }
+            return;
+        }
         if (request == FILE_REQUEST && upload != null) {
             upload.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(result, data));
             upload = null;
